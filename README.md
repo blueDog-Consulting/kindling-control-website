@@ -32,8 +32,8 @@ npm run build       # just build dist/
 
 | Path | |
 |---|---|
-| `site/` | landing page (`index.html`, `site.css`, `invite.js`, `screenshots/`), presets hub pages (`presets/`), `_headers` (CSP and other security headers), `_redirects` |
-| `worker/` | the Worker: presets API and Android test invite requests (`api.js`), magic-link sign-in (`auth.js`), email via Cloudflare Email Service (`mail.js`), upload checks (`preset.js`) |
+| `site/` | landing page (`index.html`, `site.css`, `invite.js`, `screenshots/`), `api-client.js` (shared fetch helper), presets hub pages (`presets/`), `_headers` (CSP and other security headers), `_redirects` |
+| `worker/` | the Worker: presets API and Android test invite requests (`api.js`), magic-link sign-in (`auth.js`), email for sign-in and invite confirmations via Cloudflare Email Service (`mail.js`), upload checks (`preset.js`) |
 | `migrations/` | D1 schema, applied in order |
 | `vendor/app/` | files copied **unchanged** from the app repo (see below) |
 | `tools/` | build, local server, D1 stand-in on `node:sqlite`, app sync, checks |

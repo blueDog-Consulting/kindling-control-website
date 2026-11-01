@@ -4,7 +4,7 @@ kindlingcontrol.app is one Cloudflare Worker with static assets:
 
 | Path | What | Source |
 |---|---|---|
-| `/` | landing page | `site/index.html`, `site/site.css`, `site/invite.js`, `site/screenshots/` |
+| `/` | landing page | `site/index.html`, `site/site.css`, `site/invite.js`, `site/api-client.js`, `site/screenshots/` |
 | `/guide/` | user guide (same file the apps show under **Help**) | `vendor/app/guide/`, synced from the app repo |
 | `/presets/` | presets hub: browse, preset detail, share, finish sign-in | `site/presets/` |
 | `/api/*` | presets API | `worker/` |
@@ -26,11 +26,15 @@ People share presets made with KindlingControl. Anyone can browse and download; 
 
 The Android app's Google Play test is an **internal test**, so its opt-in link only works for Google accounts already on the testers list in Play Console. The landing page's **Request an invite** links open a dialog (`site/invite.js`) that asks for a name, the email of the person's Google Play account, and consent to use them for the invite.
 
-- `POST /api/testers/request {name, email, consent: true}` stores one row per address in `tester_requests` (asking again only updates the name). It needs a real `consent: true`, is rate-limited to 5 per IP per hour, and has a hidden honeypot field (`website`): when it's filled, the answer is the same but nothing is stored.
-- Moderators see the queue on the share page, copy the addresses into the testers list in Play Console, then press **Mark invited**, which `POST`s the ids to `/api/admin/testers/invited` and **deletes** the rows. The dialog promises that emails aren't kept after the invite, so don't add a "done" flag instead of deleting.
-- The daily cleanup deletes any request left unhandled for **90 days**, which the dialog also states.
-- Nothing is emailed: no confirmation to the requester and no notification to moderators. Check the share page.
-- Without JS the links stay hidden, because the request must be sent as JSON.
+1. `POST /api/testers/request {name, email, consent: true}` stores the name as `pending_name` with a SHA-256 hash of a one-time token (24 hours), and emails a link to `/#invite-token=…` (`sendTesterConfirmEmail` in `worker/mail.js`). It needs a real `consent: true` and gives the same answer whether or not the address already asked.
+2. The token is in the URL **fragment**, as with sign-in, so mail scanners can't spend it. `invite.js` picks it up (on load or on `hashchange`), clears it from the address bar, and the person presses **Confirm my request**, which `POST`s it to `/api/testers/confirm`. That copies `pending_name` to `name` and sets `confirmed_at`.
+3. Moderators see **confirmed** requests only, on the share page. They copy the addresses into the testers list in Play Console, then press **Mark invited** (or **Mark all invited**, which needs a second click), which `POST`s the ids to `/api/admin/testers/invited` and **deletes** the rows in one query. The dialog promises that emails aren't kept after the invite, so don't add a "done" flag instead of deleting.
+
+Why the confirmation step: without it anyone could queue a stranger's address, or rename someone's request. A re-request only touches the pending fields, so the confirmed name changes only when the address owner confirms again.
+
+- **Retention** (daily cleanup): unconfirmed requests go once their link expires (a day); confirmed ones left unhandled go **90 days** after the latest confirmation (confirming a new request restarts it); expired pending names and tokens on confirmed rows are cleared. The dialog and the privacy FAQ say this, so keep them in step.
+- **Abuse:** 5 requests per IP and 3 per address per hour (the per-address limit also caps confirmation emails to someone else's inbox). A visually hidden honeypot field `kc_hp` (named so browsers and password managers have no reason to autofill it) makes the API answer normally without storing or sending anything.
+- Nothing notifies moderators; check the share page. Without JS the links stay hidden, because requests must be sent as JSON.
 
 ### Sign-in (email magic link)
 
@@ -38,20 +42,20 @@ The Android app's Google Play test is an **internal test**, so its opt-in link o
 2. The token is in the URL **fragment**, so mail scanners that pre-fetch links never send it to the server. The page clears it from the address bar, and the person presses **Finish signing in**, which `POST`s it to `/api/auth/verify`.
 3. That sets an `HttpOnly; Secure; SameSite=Lax` session cookie (30 days). Tokens and session ids are stored only as SHA-256 hashes.
 
-The request endpoint gives the same answer for new and existing addresses, and is rate-limited (5 per address and 10 per IP per hour). Uploads are limited to 20 per person per day, reports to 20 per hour, and Android test invite requests to 5 per IP per hour.
+The request endpoint gives the same answer for new and existing addresses, and is rate-limited (5 per address and 10 per IP per hour). Uploads are limited to 20 per person per day, reports to 20 per hour, and Android test invite requests to 5 per IP and 3 per address per hour.
 
 **Cross-site protection:** every write must be `Content-Type: application/json`, which browsers can't send cross-site without a CORS preflight that the API never approves. A request with an `Origin` other than `SITE_ORIGIN` is refused.
 
 ### Email
 
-`worker/mail.js` sends sign-in links through **Cloudflare Email Service**. There's no third-party provider.
+`worker/mail.js` sends sign-in links and Android test confirmation links through **Cloudflare Email Service**. There's no third-party provider.
 
-1. **Cloudflare Email Service:** a `send_email` binding named `EMAIL` (enabled in `wrangler.jsonc`). The sender `MAIL_FROM` (`KindlingControl <presets@kindlingcontrol.app>`, in `wrangler.jsonc` `vars`) must be on a domain onboarded to Email Service. The call is `env.EMAIL.send({ to: 'person@example.com', from: { email, name }, subject, text, html })`. Cloudflare's `EmailAddress` objects need both `email` and `name` as strings (a missing `name` throws a `TypeError`), so the recipient is a plain address string, and so is the sender when `MAIL_FROM` has no display name. If the call throws, the Worker logs `Email Service send failed: <name>: <code>: <message>` (never the recipient). Sign-in then answers 503, "Couldn't send the sign-in email".
+1. **Cloudflare Email Service:** a `send_email` binding named `EMAIL` (enabled in `wrangler.jsonc`). The sender `MAIL_FROM` (`KindlingControl <presets@kindlingcontrol.app>`, in `wrangler.jsonc` `vars`) must be on a domain onboarded to Email Service. The call is `env.EMAIL.send({ to: 'person@example.com', from: { email, name }, subject, text, html })`. Cloudflare's `EmailAddress` objects need both `email` and `name` as strings (a missing `name` throws a `TypeError`), so the recipient is a plain address string, and so is the sender when `MAIL_FROM` has no display name. If the call throws, the Worker logs `Email Service send failed: <name>: <code>: <message>` (never the recipient). Sign-in and invite requests then answer 503 ("Couldn't send the … email").
 2. **Development:** `DEV_SHOW_LINKS=1` returns the link to the page instead of sending it. `tools/serve.js` sets this. Never set it in production.
 
-With neither, sign-in answers 503 and says email isn't set up.
+With neither, sign-in and invite requests answer 503 and say email isn't set up.
 
-**If sign-in emails stop:** open the Worker's logs in the Cloudflare dashboard (Workers & Pages → `kindling-control-website` → Logs) and find the `Email Service send failed:` line on the `POST /api/auth/request` call. Common causes are the domain or sender address no longer being verified for sending, or a change to the binding's types. If the page says the link was sent but nothing arrives, Cloudflare accepted the message, so check the spam folder and the Email Service activity in the dashboard.
+**If emails stop:** open the Worker's logs in the Cloudflare dashboard (Workers & Pages → `kindling-control-website` → Logs) and find the `Email Service send failed:` line on the `POST /api/auth/request` (sign-in) or `POST /api/testers/request` (invite) call. Common causes are the domain or sender address no longer being verified for sending, or a change to the binding's types. If the page says the link was sent but nothing arrives, Cloudflare accepted the message, so check the spam folder and the Email Service activity in the dashboard.
 
 ### Data and privacy
 
@@ -62,7 +66,7 @@ With neither, sign-in answers 503 and says email isn't set up.
 | `presets` | the normalised preset, name, description, amp model, chain summary, download count, hidden flag |
 | `reports` | preset id, reporter key (user id or hashed IP), reason |
 | `rate_events` | rate-limit keys and times; cleaned up after 2 days |
-| `tester_requests` | name and email of people asking for an Android test invite; deleted when a moderator marks them invited, or after 90 days |
+| `tester_requests` | email, confirmed name, pending name and token hash of people asking for an Android test invite; deleted when a moderator marks them invited, a day after an unconfirmed request, or 90 days after the latest confirmation |
 
 Public API responses carry the display name, never the email. Schema: `migrations/` (`0001_presets_hub.sql`, `0002_tester_requests.sql`).
 
@@ -78,8 +82,9 @@ Public API responses carry the display name, never the email. Schema: `migration
 | POST | `/api/presets/:id/report` `{reason}` | anyone | |
 | POST | `/api/presets/:id/restore` | moderator | un-hide and clear reports |
 | GET | `/api/admin/hidden` | moderator | hidden presets with report counts |
-| POST | `/api/testers/request` `{name, email, consent: true}` | anyone | Android test invite request |
-| GET | `/api/admin/testers` | moderator | waiting invite requests (name, email) |
+| POST | `/api/testers/request` `{name, email, consent: true}` | anyone | emails a confirmation link |
+| POST | `/api/testers/confirm` `{token}` | anyone with the link | confirms the request |
+| GET | `/api/admin/testers` | moderator | confirmed requests waiting (name, email) |
 | POST | `/api/admin/testers/invited` `{ids}` | moderator | deletes those requests |
 | POST | `/api/auth/request` `{email}` · `/api/auth/verify` `{token}` · `/api/auth/logout` | | |
 | GET / PATCH | `/api/me` `{displayName}` · GET `/api/me/presets` | signed in | |

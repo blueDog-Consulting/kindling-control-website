@@ -1,25 +1,10 @@
 // Presets hub pages on kindlingcontrol.app. Plain DOM, no dependencies.
 // Every piece of user content is written with textContent, never as HTML.
 
+import { api } from '/api-client.js';
+
 const SLOT_LABELS = { gate: 'Gate', comp: 'Comp', drive: 'Drive', amp: 'Amp', mod: 'Mod', delay: 'Delay', reverb: 'Reverb' };
 const $ = (sel) => document.querySelector(sel);
-
-async function api(path, { method = 'GET', body } = {}) {
-  const res = await fetch(`/api${path}`, {
-    method,
-    headers: body === undefined ? {} : { 'content-type': 'application/json' },
-    body: body === undefined ? undefined : JSON.stringify(body),
-    credentials: 'same-origin',
-  });
-  let data = {};
-  try {
-    data = await res.json();
-  } catch {
-    // non-JSON error page
-  }
-  if (!res.ok) throw Object.assign(new Error(data.error || `Request failed (${res.status})`), { status: res.status });
-  return data;
-}
 
 function el(tag, props = {}, ...children) {
   const node = document.createElement(tag);
@@ -264,12 +249,11 @@ async function share() {
   }
 }
 
-// Requests to join the invite-only Android test. Deleting a row is how a moderator marks it invited.
+// Confirmed requests to join the invite-only Android test. Deleting a row is how a moderator marks it invited.
 async function testerRequests() {
   $('#testers').hidden = false;
   let items = [];
   const markInvited = async (ids) => {
-    if (!ids.length) return;
     try {
       await api('/admin/testers/invited', { method: 'POST', body: { ids } });
       setStatus(`${plural(ids.length, 'request')} marked invited and deleted.`, 'ok');
@@ -279,7 +263,15 @@ async function testerRequests() {
     await load();
   };
   const load = async () => {
-    ({ items } = await api('/admin/testers').catch(() => ({ items: [] })));
+    try {
+      ({ items } = await api('/admin/testers'));
+    } catch (err) {
+      items = [];
+      $('#testers-list').replaceChildren(el('li', { class: 'muted', text: `Couldn't load the requests: ${err.message}` }));
+      $('#testers-copy').disabled = $('#testers-done-all').disabled = true;
+      return;
+    }
+    disarm();
     $('#testers-copy').disabled = $('#testers-done-all').disabled = !items.length;
     $('#testers-list').replaceChildren(
       ...(items.length
@@ -288,7 +280,7 @@ async function testerRequests() {
               'li',
               {},
               el('span', { text: `${r.name} <${r.email}>` }),
-              el('span', { class: 'muted', text: ` · ${date(r.createdAt)} ` }),
+              el('span', { class: 'muted', text: ` · ${date(r.confirmedAt)} ` }),
               el('button', { type: 'button', class: 'linkish', text: 'Mark invited', onclick: () => markInvited([r.id]) }),
             ),
           )
@@ -303,8 +295,24 @@ async function testerRequests() {
       setStatus("Couldn't copy to the clipboard.", 'error');
     }
   });
-  $('#testers-done-all').addEventListener('click', () => {
-    if (confirm(`Mark all ${plural(items.length, 'request')} invited? This deletes them from this site.`)) markInvited(items.map((r) => r.id));
+  // Two clicks instead of confirm(), which browsers can suppress (it then returns false silently).
+  const all = $('#testers-done-all');
+  let armed = null;
+  const disarm = () => {
+    clearTimeout(armed);
+    armed = null;
+    all.textContent = 'Mark all invited';
+  };
+  all.addEventListener('click', () => {
+    if (!items.length) return;
+    if (!armed) {
+      all.textContent = `Click again to delete all ${plural(items.length, 'request')}`;
+      armed = setTimeout(disarm, 5000);
+      return;
+    }
+    const ids = items.map((r) => r.id);
+    disarm();
+    markInvited(ids);
   });
   await load();
 }

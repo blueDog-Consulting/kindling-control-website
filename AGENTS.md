@@ -36,9 +36,9 @@ One Cloudflare Worker serves it all (`wrangler.jsonc`). Static files come from `
 ## Layout
 
 ```
-site/                 landing page (+ invite.js), presets hub pages (presets/), _headers, _redirects, screenshots/
+site/                 landing page (+ invite.js), api-client.js (shared fetch helper), presets hub pages (presets/), _headers, _redirects, screenshots/
 worker/               index.js (routing, www fallback, cron), api.js (routes), auth.js (magic link + sessions),
-                      mail.js (Email Service / dev), preset.js (upload validation), util.js
+                      mail.js (sign-in + invite confirmation mail: Email Service / dev), preset.js (upload validation), util.js
 migrations/           D1 schema, numbered; never edit one that has been applied
 vendor/app/           files copied unchanged from the app repo; SOURCE.json = commit + hashes
 tools/                build.js, serve.js (local site + API), d1-sqlite.js (D1 on node:sqlite),
@@ -76,16 +76,18 @@ npm run deploy           # build + D1 migrations + wrangler deploy (needs the se
 - **Security:**
   - Writes must be same-origin `application/json` (the CSRF defence), so don't add CORS to write endpoints. Downloads allow `*`, so the apps can fetch presets.
   - Hub pages are plain DOM ES modules under a strict CSP (`site/_headers`): no inline script or style on `/presets/*`. Render user content with `textContent` only, never `innerHTML`.
-  - `[hidden]` is forced to `display: none` in `presets.css`, because component rules set `display`.
+  - `[hidden]` is forced to `display: none` in `site.css` (hub pages load it too), because component rules set `display`.
+  - Pages call the API through `api()` in `site/api-client.js`; don't hand-roll fetch calls.
 - **Moderation:** 3 reports hide a preset; moderators (`ADMIN_EMAILS` secret) restore or delete it. Rate limits live in D1 (`rate_events`).
-- **Email:** Cloudflare Email Service (`send_email` binding `EMAIL`) only; Resend and other providers aren't used. Dev mode (`DEV_SHOW_LINKS=1`) is local only, never in production. The call is `env.EMAIL.send({ to: '<address>', from: { email, name }, subject, text, html })`. Cloudflare's `EmailAddress` objects need both `email` and `name` as strings, so keep the recipient a plain address string; `to: [{ email }]` throws a `TypeError` (that broke the first live sign-in). The fake binding in `test/presets-hub.test.js` applies the same check. If a send throws, `mail.js` logs `Email Service send failed: …` (never the recipient) and sign-in answers 503, never a bare 500. Troubleshooting steps are in `docs/PRESETS.md#email`.
+- **Email:** Cloudflare Email Service (`send_email` binding `EMAIL`) only; Resend and other providers aren't used. Dev mode (`DEV_SHOW_LINKS=1`) is local only, never in production. The call is `env.EMAIL.send({ to: '<address>', from: { email, name }, subject, text, html })`. Cloudflare's `EmailAddress` objects need both `email` and `name` as strings, so keep the recipient a plain address string; `to: [{ email }]` throws a `TypeError` (that broke the first live sign-in). The fake binding in `test/presets-hub.test.js` applies the same check. If a send throws, `mail.js` logs `Email Service send failed: …` (never the recipient) and sign-in or the invite request answers 503, never a bare 500. Troubleshooting steps are in `docs/PRESETS.md#email`.
 - **Schema changes** go in a **new** numbered migration. Deploys apply them before `wrangler deploy`.
 
 ## Android test invites (details in `docs/PRESETS.md`)
 
 - The Google Play test is an internal test: its opt-in link only works for accounts on the testers list. The landing page's **Request an invite** links open a `<dialog>` (`site/invite.js`) that posts `{name, email, consent: true}` to `/api/testers/request`.
-- Requests live in `tester_requests` only until a moderator marks them invited on the share page, which **deletes** them; the cron drops unhandled ones after 90 days. The dialog promises exactly this, so keep the code and the copy in step (and never keep the emails around after inviting).
-- Same-origin JSON, rate-limited per IP, with a honeypot field. The links are hidden without JS.
+- A request only reaches moderators after the address owner **confirms** it from the emailed link (`/#invite-token=…`, fragment + POST like sign-in). Re-requests only touch the pending fields, so strangers can't queue or rename someone's request.
+- Moderators delete rows when they've invited the person (share page; one query). The cron drops unconfirmed requests after a day and confirmed ones 90 days after the latest confirmation. The dialog and privacy FAQ promise exactly this, so keep code and copy in step, and never keep emails after inviting.
+- Same-origin JSON, rate-limited per IP and per address, honeypot field `kc_hp` (don't rename it to something autofill would fill). The links are hidden without JS.
 
 ## Landing page
 

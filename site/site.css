@@ -217,7 +217,7 @@ a:hover { color: #ffc861; }
 
 /* ---- Android test invite dialog (site/invite.js) ------------------------------- */
 
-[hidden] { display: none !important; } /* component rules below set display */
+[hidden] { display: none !important; } /* component rules set display; hidden must still win (here and on hub pages) */
 button.btn { font: inherit; font-weight: 700; cursor: pointer; }
 button.btn:disabled { opacity: 0.6; cursor: progress; }
 .linkish { padding: 0; border: 0; background: none; font: inherit; color: var(--accent); text-decoration: underline; cursor: pointer; }
@@ -232,6 +232,7 @@ button.btn:disabled { opacity: 0.6; cursor: progress; }
 #invite::backdrop { background: rgb(0 0 0 / 0.65); overflow: hidden; overscroll-behavior: contain; }
 #invite h2 { margin: 0 0 0.6rem; font-size: 1.3rem; }
 #invite p { margin: 0 0 1rem; color: #c6ccd3; }
+#invite .dev-link { overflow-wrap: anywhere; }
 #invite label { display: block; font-weight: 700; margin-bottom: 0.3rem; }
 #invite input:not([type=checkbox]) {
   display: block; inline-size: 100%; margin-bottom: 1rem; padding: 0.6rem 0.75rem;
