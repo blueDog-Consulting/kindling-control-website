@@ -1,13 +1,12 @@
-// Sends the sign-in email. Providers, in order of preference:
+// Sends the sign-in email through Cloudflare Email Service: the `send_email` binding named EMAIL
+// in wrangler.jsonc. The sender (MAIL_FROM) must be on a domain onboarded to Email Service.
+// There's no third-party provider.
 //
-//   1. Cloudflare Email Service: a `send_email` binding named EMAIL in wrangler.jsonc.
-//      The sender (MAIL_FROM) must be on a domain onboarded to Email Service.
-//   2. Resend (https://resend.com): set the secret RESEND_API_KEY.
-//   3. Development only: DEV_SHOW_LINKS = "1" logs the link and returns it to the caller
-//      instead of sending anything. Never set this in production.
+// Development only: DEV_SHOW_LINKS = "1" logs the link and returns it to the caller instead of
+// sending anything. Never set this in production.
 //
-// The Email Service call shape follows Cloudflare's published examples; it hasn't been
-// exercised against a live account from this repo yet (see docs/PRESETS.md).
+// Without either, sign-in answers 503. A failed send is logged (never the recipient) and also
+// answers 503. See docs/PRESETS.md#email.
 
 import { HttpError } from './util.js';
 

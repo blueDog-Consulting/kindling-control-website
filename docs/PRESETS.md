@@ -34,12 +34,14 @@ The request endpoint gives the same answer for new and existing addresses, and i
 
 ### Email
 
-`worker/mail.js` sends through Cloudflare Email Service; there's no third-party provider:
+`worker/mail.js` sends sign-in links through **Cloudflare Email Service**. There's no third-party provider.
 
-1. **Cloudflare Email Service:** a `send_email` binding named `EMAIL` (enabled in `wrangler.jsonc`). The sender `MAIL_FROM` must be on a domain onboarded to Email Service. The call is `env.EMAIL.send({ to: 'person@example.com', from: { email, name }, subject, text, html })`. Cloudflare's `EmailAddress` objects need both `email` and `name` as strings (a missing `name` throws a `TypeError`), so the recipient is a plain address string, and so is the sender when `MAIL_FROM` has no display name. If the call throws, the Worker logs `Email Service send failed: <name>: <code>: <message>` (never the recipient). Sign-in then answers 503, "Couldn't send the sign-in email".
+1. **Cloudflare Email Service:** a `send_email` binding named `EMAIL` (enabled in `wrangler.jsonc`). The sender `MAIL_FROM` (`KindlingControl <presets@kindlingcontrol.app>`, in `wrangler.jsonc` `vars`) must be on a domain onboarded to Email Service. The call is `env.EMAIL.send({ to: 'person@example.com', from: { email, name }, subject, text, html })`. Cloudflare's `EmailAddress` objects need both `email` and `name` as strings (a missing `name` throws a `TypeError`), so the recipient is a plain address string, and so is the sender when `MAIL_FROM` has no display name. If the call throws, the Worker logs `Email Service send failed: <name>: <code>: <message>` (never the recipient). Sign-in then answers 503, "Couldn't send the sign-in email".
 2. **Development:** `DEV_SHOW_LINKS=1` returns the link to the page instead of sending it. `tools/serve.js` sets this. Never set it in production.
 
-With none configured, sign-in answers 503 and says email isn't set up.
+With neither, sign-in answers 503 and says email isn't set up.
+
+**If sign-in emails stop:** open the Worker's logs in the Cloudflare dashboard (Workers & Pages → `kindling-control-website` → Logs) and find the `Email Service send failed:` line on the `POST /api/auth/request` call. Common causes are the domain or sender address no longer being verified for sending, or a change to the binding's types. If the page says the link was sent but nothing arrives, Cloudflare accepted the message, so check the spam folder and the Email Service activity in the dashboard.
 
 ### Data and privacy
 
@@ -82,7 +84,7 @@ npm run dev          # build dist/, then serve site + API on http://localhost:87
 
 1. **Domain:** add `kindlingcontrol.app` to your Cloudflare account as a zone. `wrangler deploy` then attaches `kindlingcontrol.app` and `www.kindlingcontrol.app` as custom domains (`routes` in `wrangler.jsonc`). Then add a **Redirect Rule** (Rules → Redirect Rules) on the zone: when the hostname equals `www.kindlingcontrol.app`, 301-redirect to `https://kindlingcontrol.app` with the request path, preserving the query string.
 2. **Database:** `npx wrangler d1 create kindling-presets`, and paste the printed `database_id` into `wrangler.jsonc`.
-3. **Email:** onboard `kindlingcontrol.app` to Cloudflare Email Service, the `send_email` binding in `wrangler.jsonc` is already enabled.
+3. **Email:** onboard `kindlingcontrol.app` to Cloudflare Email Service and verify it for sending, so `presets@kindlingcontrol.app` (`MAIL_FROM`) can send. The `send_email` binding in `wrangler.jsonc` is already enabled. Then request a sign-in link on the live site to check it.
 4. **Secrets:** `npx wrangler secret put ADMIN_EMAILS` (moderators, comma-separated) and `npx wrangler secret put IP_HASH_SALT` (any long random string).
 5. **CI:** add these secrets to this repository `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`. The token needs Workers Scripts: Edit, D1: Edit and, for the custom domain, Workers Routes: Edit on the zone.
 

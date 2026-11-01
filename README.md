@@ -33,7 +33,7 @@ npm run build       # just build dist/
 | Path | |
 |---|---|
 | `site/` | landing page (`index.html`, `site.css`, `screenshots/`), presets hub pages (`presets/`), `_headers` (CSP and other security headers), `_redirects` |
-| `worker/` | the Worker: presets API (`api.js`), magic-link sign-in (`auth.js`), email (`mail.js`), upload checks (`preset.js`) |
+| `worker/` | the Worker: presets API (`api.js`), magic-link sign-in (`auth.js`), email via Cloudflare Email Service (`mail.js`), upload checks (`preset.js`) |
 | `migrations/` | D1 schema, applied in order |
 | `vendor/app/` | files copied **unchanged** from the app repo (see below) |
 | `tools/` | build, local server, D1 stand-in on `node:sqlite`, app sync, checks |
@@ -57,7 +57,7 @@ CI fails if a vendored file was edited by hand. A weekly workflow (`app-updates.
 
 ## Deploy
 
-Pushes to `main` deploy through `.github/workflows/deploy.yml`: tests, then build, then D1 migrations, then `wrangler deploy`. `npm run deploy` does the same by hand. It needs a one-time Cloudflare setup (the domain, a D1 database, email for sign-in links, and secrets), described in [docs/PRESETS.md](docs/PRESETS.md#setting-up-cloudflare-once). Without the `CLOUDFLARE_API_TOKEN` secret, the workflow tests and builds but skips the deploy.
+Pushes to `main` deploy through `.github/workflows/deploy.yml`: tests, then build, then D1 migrations, then `wrangler deploy`. `npm run deploy` does the same by hand. It needs a one-time Cloudflare setup (the domain, a D1 database, Cloudflare Email Service for sign-in links, and secrets), described in [docs/PRESETS.md](docs/PRESETS.md#setting-up-cloudflare-once). Without the `CLOUDFLARE_API_TOKEN` secret, the workflow tests and builds but skips the deploy.
 
 ## Contributing
 
