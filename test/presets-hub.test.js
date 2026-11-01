@@ -147,31 +147,6 @@ test('an Email Service failure is a clear 503, not a 500', async () => {
   assert.ok(!logged.some((l) => l.includes('a@example.com')), 'the recipient is never logged');
 });
 
-test('if Email Service fails and Resend is configured, Resend sends the link', async () => {
-  const h = setup();
-  delete h.env.DEV_SHOW_LINKS;
-  h.env.EMAIL = { send: async () => { throw new Error('nope'); } };
-  h.env.RESEND_API_KEY = 're_test';
-  const calls = [];
-  const origFetch = globalThis.fetch;
-  const origErr = console.error;
-  globalThis.fetch = async (url, init) => {
-    calls.push({ url, body: JSON.parse(init.body) });
-    return new Response('{}', { status: 200 });
-  };
-  console.error = () => {};
-  try {
-    const r = await h.call('POST', '/api/auth/request', { body: { email: 'a@example.com' } });
-    assert.equal(r.status, 200);
-  } finally {
-    globalThis.fetch = origFetch;
-    console.error = origErr;
-  }
-  assert.equal(calls.length, 1);
-  assert.equal(calls[0].url, 'https://api.resend.com/emails');
-  assert.deepEqual(calls[0].body.to, ['a@example.com']);
-});
-
 test('uploading needs a session and the CC0 agreement, and validates the file', async () => {
   const h = setup();
   assert.equal((await upload(h, undefined)).status, 401);

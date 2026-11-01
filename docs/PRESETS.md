@@ -34,11 +34,10 @@ The request endpoint gives the same answer for new and existing addresses, and i
 
 ### Email
 
-`worker/mail.js` uses the first one that's configured:
+`worker/mail.js` sends through Cloudflare Email Service; there's no third-party provider:
 
-1. **Cloudflare Email Service:** a `send_email` binding named `EMAIL` (enabled in `wrangler.jsonc`). The sender `MAIL_FROM` must be on a domain onboarded to Email Service. **(unverified)** The call (`env.EMAIL.send({ to: [{ email }], from: { email, name }, subject, text, html })`) follows Cloudflare's published examples, but it hasn't yet sent a message from a live account. If the call throws, the Worker logs `Email Service send failed: <name>: <code>: <message>` (never the recipient) and tries Resend if `RESEND_API_KEY` is set. Otherwise sign-in answers 503, "Couldn't send the sign-in email".
-2. **Resend:** set the secret `RESEND_API_KEY`. It's used when there's no `EMAIL` binding, or as the fallback when Email Service fails. Resend errors are logged with their status and answer 503.
-3. **Development:** `DEV_SHOW_LINKS=1` returns the link to the page instead of sending it. `tools/serve.js` sets this. Never set it in production.
+1. **Cloudflare Email Service:** a `send_email` binding named `EMAIL` (enabled in `wrangler.jsonc`). The sender `MAIL_FROM` must be on a domain onboarded to Email Service. **(unverified)** The call (`env.EMAIL.send({ to: [{ email }], from: { email, name }, subject, text, html })`) follows Cloudflare's published examples, but it hasn't yet sent a message from a live account. If the call throws, the Worker logs `Email Service send failed: <name>: <code>: <message>` (never the recipient). Sign-in then answers 503, "Couldn't send the sign-in email".
+2. **Development:** `DEV_SHOW_LINKS=1` returns the link to the page instead of sending it. `tools/serve.js` sets this. Never set it in production.
 
 With none configured, sign-in answers 503 and says email isn't set up.
 
@@ -83,7 +82,7 @@ npm run dev          # build dist/, then serve site + API on http://localhost:87
 
 1. **Domain:** add `kindlingcontrol.app` to your Cloudflare account as a zone. `wrangler deploy` then attaches `kindlingcontrol.app` and `www.kindlingcontrol.app` as custom domains (`routes` in `wrangler.jsonc`). Then add a **Redirect Rule** (Rules → Redirect Rules) on the zone: when the hostname equals `www.kindlingcontrol.app`, 301-redirect to `https://kindlingcontrol.app` with the request path, preserving the query string.
 2. **Database:** `npx wrangler d1 create kindling-presets`, and paste the printed `database_id` into `wrangler.jsonc`.
-3. **Email:** onboard `kindlingcontrol.app` to Cloudflare Email Service, the `send_email` binding in `wrangler.jsonc` is already enabled. Alternatively, `npx wrangler secret put RESEND_API_KEY`.
+3. **Email:** onboard `kindlingcontrol.app` to Cloudflare Email Service, the `send_email` binding in `wrangler.jsonc` is already enabled.
 4. **Secrets:** `npx wrangler secret put ADMIN_EMAILS` (moderators, comma-separated) and `npx wrangler secret put IP_HASH_SALT` (any long random string).
 5. **CI:** add these secrets to this repository `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`. The token needs Workers Scripts: Edit, D1: Edit and, for the custom domain, Workers Routes: Edit on the zone.
 

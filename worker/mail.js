@@ -29,25 +29,13 @@ export async function sendSignInEmail(env, to, link) {
   if (env.EMAIL && typeof env.EMAIL.send === 'function') {
     try {
       await env.EMAIL.send({ to: [{ email: to }], from, subject, text, html });
-      return { provider: 'cloudflare' };
     } catch (err) {
-      // Log what Email Service said (never the recipient) so the Worker logs show why, e.g. an
-      // unverified sender domain. Then fall back to Resend if it's configured.
+      // Log what Email Service said (never the recipient) so the Worker logs show why,
+      // e.g. an unverified sender domain.
       console.error('Email Service send failed:', describeError(err));
-      if (!env.RESEND_API_KEY) throw new HttpError(503, "Couldn't send the sign-in email. Please try again later.");
-    }
-  }
-  if (env.RESEND_API_KEY) {
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { authorization: `Bearer ${env.RESEND_API_KEY}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ from: from.name ? `${from.name} <${from.email}>` : from.email, to: [to], subject, text, html }),
-    });
-    if (!res.ok) {
-      console.error(`Resend send failed: ${res.status} ${(await res.text().catch(() => '')).slice(0, 500)}`);
       throw new HttpError(503, "Couldn't send the sign-in email. Please try again later.");
     }
-    return { provider: 'resend' };
+    return { provider: 'cloudflare' };
   }
   if (env.DEV_SHOW_LINKS === '1') {
     console.log(`[dev] sign-in link for ${to}: ${link}`);
