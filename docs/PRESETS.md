@@ -36,8 +36,8 @@ The request endpoint gives the same answer for new and existing addresses, and i
 
 `worker/mail.js` uses the first one that's configured:
 
-1. **Cloudflare Email Service:** a `send_email` binding named `EMAIL` (commented out in `wrangler.jsonc` until the domain is onboarded). The sender `MAIL_FROM` must be on the onboarded domain. **(unverified)** The call (`env.EMAIL.send({ to: [{ email }], from: { email, name }, subject, text, html })`) follows Cloudflare's published examples, but it hasn't been run against a live account yet. Test it after onboarding.
-2. **Resend:** set the secret `RESEND_API_KEY`.
+1. **Cloudflare Email Service:** a `send_email` binding named `EMAIL` (enabled in `wrangler.jsonc`). The sender `MAIL_FROM` must be on a domain onboarded to Email Service. **(unverified)** The call (`env.EMAIL.send({ to: [{ email }], from: { email, name }, subject, text, html })`) follows Cloudflare's published examples, but it hasn't yet sent a message from a live account. If the call throws, the Worker logs `Email Service send failed: <name>: <code>: <message>` (never the recipient) and tries Resend if `RESEND_API_KEY` is set. Otherwise sign-in answers 503, "Couldn't send the sign-in email".
+2. **Resend:** set the secret `RESEND_API_KEY`. It's used when there's no `EMAIL` binding, or as the fallback when Email Service fails. Resend errors are logged with their status and answer 503.
 3. **Development:** `DEV_SHOW_LINKS=1` returns the link to the page instead of sending it. `tools/serve.js` sets this. Never set it in production.
 
 With none configured, sign-in answers 503 and says email isn't set up.

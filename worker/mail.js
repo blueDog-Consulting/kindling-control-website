@@ -27,8 +27,15 @@ export async function sendSignInEmail(env, to, link) {
 <p>It works once and expires in 15 minutes. If you didn't ask for it, you can ignore this email.</p>`;
 
   if (env.EMAIL && typeof env.EMAIL.send === 'function') {
-    await env.EMAIL.send({ to: [{ email: to }], from, subject, text, html });
-    return { provider: 'cloudflare' };
+    try {
+      await env.EMAIL.send({ to: [{ email: to }], from, subject, text, html });
+      return { provider: 'cloudflare' };
+    } catch (err) {
+      // Log what Email Service said (never the recipient) so the Worker logs show why, e.g. an
+      // unverified sender domain. Then fall back to Resend if it's configured.
+      console.error('Email Service send failed:', describeError(err));
+      if (!env.RESEND_API_KEY) throw new HttpError(503, "Couldn't send the sign-in email. Please try again later.");
+    }
   }
   if (env.RESEND_API_KEY) {
     const res = await fetch('https://api.resend.com/emails', {
@@ -36,7 +43,10 @@ export async function sendSignInEmail(env, to, link) {
       headers: { authorization: `Bearer ${env.RESEND_API_KEY}`, 'content-type': 'application/json' },
       body: JSON.stringify({ from: from.name ? `${from.name} <${from.email}>` : from.email, to: [to], subject, text, html }),
     });
-    if (!res.ok) throw new Error(`Resend returned ${res.status}`);
+    if (!res.ok) {
+      console.error(`Resend send failed: ${res.status} ${(await res.text().catch(() => '')).slice(0, 500)}`);
+      throw new HttpError(503, "Couldn't send the sign-in email. Please try again later.");
+    }
     return { provider: 'resend' };
   }
   if (env.DEV_SHOW_LINKS === '1') {
@@ -44,6 +54,11 @@ export async function sendSignInEmail(env, to, link) {
     return { provider: 'dev', devLink: link };
   }
   throw new HttpError(503, "Signing in isn't available right now: email sending isn't set up.");
+}
+
+function describeError(err) {
+  if (!(err instanceof Error)) return String(err);
+  return [err.name, err.code, err.message].filter(Boolean).join(': ');
 }
 
 function parseAddress(s) {
