@@ -12,7 +12,7 @@
 import { HttpError } from './util.js';
 
 export async function sendSignInEmail(env, to, link) {
-  const from = parseAddress(env.MAIL_FROM || 'KindlingControl <presets@kindlingspark.app>');
+  const from = parseAddress(env.MAIL_FROM || 'KindlingControl <presets@kindlingcontrol.app>');
   const subject = 'Your KindlingControl sign-in link';
   const text = [
     'Use this link to sign in to the KindlingControl presets hub:',

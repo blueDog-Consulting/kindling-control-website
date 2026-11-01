@@ -1,4 +1,4 @@
-// Presets hub pages on kindlingspark.app. Plain DOM, no dependencies.
+// Presets hub pages on kindlingcontrol.app. Plain DOM, no dependencies.
 // Every piece of user content is written with textContent, never as HTML.
 
 const SLOT_LABELS = { gate: 'Gate', comp: 'Comp', drive: 'Drive', amp: 'Amp', mod: 'Mod', delay: 'Delay', reverb: 'Reverb' };

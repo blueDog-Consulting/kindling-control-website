@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Builds kindlingspark.app into dist/ (served by the Worker as static assets, see wrangler.jsonc):
+// Builds kindlingcontrol.app into dist/ (served by the Worker as static assets, see wrangler.jsonc):
 //   /                  landing page and presets hub pages (site/)
 //   /guide/            the app's user guide (vendor/app/guide/, synced from the app repo)
 //   /icon.svg, /icons/ app icons (vendor/app/)

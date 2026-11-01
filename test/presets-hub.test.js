@@ -7,7 +7,7 @@ import { blankPreset } from '../vendor/app/spark/effects.js';
 import { presetToJson, presetFromJson } from '../vendor/app/spark/messages.js';
 import { createD1 } from '../tools/d1-sqlite.js';
 
-const ORIGIN = 'https://kindlingspark.app';
+const ORIGIN = 'https://kindlingcontrol.app';
 
 function setup() {
   const env = {
@@ -120,14 +120,14 @@ test('the Cloudflare Email Service binding is used when configured', async () =>
   const h = setup();
   const sent = [];
   h.env.EMAIL = { send: async (msg) => sent.push(msg) };
-  h.env.MAIL_FROM = 'KindlingControl <presets@kindlingspark.app>';
+  h.env.MAIL_FROM = 'KindlingControl <presets@kindlingcontrol.app>';
   const r = await h.call('POST', '/api/auth/request', { body: { email: 'a@example.com' } });
   assert.equal(r.status, 200);
   assert.equal(r.data.devLink, undefined, 'the link is never returned when real email is configured');
   assert.equal(sent.length, 1);
   assert.deepEqual(sent[0].to, [{ email: 'a@example.com' }]);
-  assert.deepEqual(sent[0].from, { email: 'presets@kindlingspark.app', name: 'KindlingControl' });
-  assert.match(sent[0].text, /https:\/\/kindlingspark\.app\/presets\/signin\.html#token=/);
+  assert.deepEqual(sent[0].from, { email: 'presets@kindlingcontrol.app', name: 'KindlingControl' });
+  assert.match(sent[0].text, /https:\/\/kindlingcontrol\.app\/presets\/signin\.html#token=/);
 });
 
 test('uploading needs a session and the CC0 agreement, and validates the file', async () => {
@@ -250,9 +250,9 @@ test('only the owner or a moderator can delete', async () => {
 
 test('www redirects to the apex domain; other paths are static assets', async () => {
   const h = setup();
-  const r = await worker.fetch(new Request('https://www.kindlingspark.app/guide/?x=1'), h.env, h.ctx);
+  const r = await worker.fetch(new Request('https://www.kindlingcontrol.app/guide/?x=1'), h.env, h.ctx);
   assert.equal(r.status, 301);
-  assert.equal(r.headers.get('location'), 'https://kindlingspark.app/guide/?x=1');
+  assert.equal(r.headers.get('location'), 'https://kindlingcontrol.app/guide/?x=1');
   assert.equal(await (await worker.fetch(new Request(`${ORIGIN}/presets/`), h.env, h.ctx)).text(), 'asset /presets/');
   assert.equal((await h.call('GET', '/api/nope')).status, 404);
 });

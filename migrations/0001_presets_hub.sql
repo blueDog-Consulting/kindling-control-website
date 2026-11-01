@@ -1,4 +1,4 @@
--- Presets hub on kindlingspark.app (Cloudflare D1).
+-- Presets hub on kindlingcontrol.app (Cloudflare D1).
 -- Apply with: npx wrangler d1 migrations apply kindling-presets --remote   (CI does this before each deploy)
 
 -- People who have signed in at least once. The email is only used to send

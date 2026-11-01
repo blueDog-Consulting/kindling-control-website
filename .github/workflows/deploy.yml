@@ -1,6 +1,6 @@
 name: Deploy
 
-# Deploys kindlingspark.app (landing page, user guide, presets hub + API) to
+# Deploys kindlingcontrol.app (landing page, user guide, presets hub + API) to
 # Cloudflare Workers on every push to main. Without the CLOUDFLARE_API_TOKEN
 # secret it only tests and builds. Setup (D1 database, email, secrets): docs/PRESETS.md.
 
