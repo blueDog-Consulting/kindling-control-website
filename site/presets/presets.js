@@ -260,7 +260,53 @@ async function share() {
           )
         : [el('li', { class: 'muted', text: 'Nothing hidden.' })]),
     );
+    await testerRequests();
   }
+}
+
+// Requests to join the invite-only Android test. Deleting a row is how a moderator marks it invited.
+async function testerRequests() {
+  $('#testers').hidden = false;
+  let items = [];
+  const markInvited = async (ids) => {
+    if (!ids.length) return;
+    try {
+      await api('/admin/testers/invited', { method: 'POST', body: { ids } });
+      setStatus(`${plural(ids.length, 'request')} marked invited and deleted.`, 'ok');
+    } catch (err) {
+      setStatus(err.message, 'error');
+    }
+    await load();
+  };
+  const load = async () => {
+    ({ items } = await api('/admin/testers').catch(() => ({ items: [] })));
+    $('#testers-copy').disabled = $('#testers-done-all').disabled = !items.length;
+    $('#testers-list').replaceChildren(
+      ...(items.length
+        ? items.map((r) =>
+            el(
+              'li',
+              {},
+              el('span', { text: `${r.name} <${r.email}>` }),
+              el('span', { class: 'muted', text: ` · ${date(r.createdAt)} ` }),
+              el('button', { type: 'button', class: 'linkish', text: 'Mark invited', onclick: () => markInvited([r.id]) }),
+            ),
+          )
+        : [el('li', { class: 'muted', text: 'No requests waiting.' })]),
+    );
+  };
+  $('#testers-copy').addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(items.map((r) => r.email).join(', '));
+      setStatus(`Copied ${plural(items.length, 'email address')}. Paste them into the testers list in Play Console.`, 'ok');
+    } catch {
+      setStatus("Couldn't copy to the clipboard.", 'error');
+    }
+  });
+  $('#testers-done-all').addEventListener('click', () => {
+    if (confirm(`Mark all ${plural(items.length, 'request')} invited? This deletes them from this site.`)) markInvited(items.map((r) => r.id));
+  });
+  await load();
 }
 
 function myRow(p) {

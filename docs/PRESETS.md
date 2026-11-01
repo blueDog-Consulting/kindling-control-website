@@ -4,7 +4,7 @@ kindlingcontrol.app is one Cloudflare Worker with static assets:
 
 | Path | What | Source |
 |---|---|---|
-| `/` | landing page | `site/index.html`, `site/site.css`, `site/screenshots/` |
+| `/` | landing page | `site/index.html`, `site/site.css`, `site/invite.js`, `site/screenshots/` |
 | `/guide/` | user guide (same file the apps show under **Help**) | `vendor/app/guide/`, synced from the app repo |
 | `/presets/` | presets hub: browse, preset detail, share, finish sign-in | `site/presets/` |
 | `/api/*` | presets API | `worker/` |
@@ -22,13 +22,23 @@ People share presets made with KindlingControl. Anyone can browse and download; 
 - **Licence:** uploaders confirm they made the preset and dedicate it to the public domain under [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). Uploads without that confirmation are refused.
 - **Moderation:** anyone can report a preset (one report per person per preset; signed-out reporters are identified by a salted hash of their IP). After **3** reports it's hidden from the list, the detail page and downloads, but stays visible to its owner and to moderators. Moderators are the addresses in the `ADMIN_EMAILS` secret: they see hidden presets on the share page, and can restore or delete any preset. Owners can delete their own.
 
+### Android test invites
+
+The Android app's Google Play test is an **internal test**, so its opt-in link only works for Google accounts already on the testers list in Play Console. The landing page's **Request an invite** links open a dialog (`site/invite.js`) that asks for a name, the email of the person's Google Play account, and consent to use them for the invite.
+
+- `POST /api/testers/request {name, email, consent: true}` stores one row per address in `tester_requests` (asking again only updates the name). It needs a real `consent: true`, is rate-limited to 5 per IP per hour, and has a hidden honeypot field (`website`): when it's filled, the answer is the same but nothing is stored.
+- Moderators see the queue on the share page, copy the addresses into the testers list in Play Console, then press **Mark invited**, which `POST`s the ids to `/api/admin/testers/invited` and **deletes** the rows. The dialog promises that emails aren't kept after the invite, so don't add a "done" flag instead of deleting.
+- The daily cleanup deletes any request left unhandled for **90 days**, which the dialog also states.
+- Nothing is emailed: no confirmation to the requester and no notification to moderators. Check the share page.
+- Without JS the links stay hidden, because the request must be sent as JSON.
+
 ### Sign-in (email magic link)
 
 1. `POST /api/auth/request {email}` creates a one-time token (15 minutes) and emails a link to `/presets/signin.html#token=…`.
 2. The token is in the URL **fragment**, so mail scanners that pre-fetch links never send it to the server. The page clears it from the address bar, and the person presses **Finish signing in**, which `POST`s it to `/api/auth/verify`.
 3. That sets an `HttpOnly; Secure; SameSite=Lax` session cookie (30 days). Tokens and session ids are stored only as SHA-256 hashes.
 
-The request endpoint gives the same answer for new and existing addresses, and is rate-limited (5 per address and 10 per IP per hour). Uploads are limited to 20 per person per day, and reports to 20 per hour.
+The request endpoint gives the same answer for new and existing addresses, and is rate-limited (5 per address and 10 per IP per hour). Uploads are limited to 20 per person per day, reports to 20 per hour, and Android test invite requests to 5 per IP per hour.
 
 **Cross-site protection:** every write must be `Content-Type: application/json`, which browsers can't send cross-site without a CORS preflight that the API never approves. A request with an `Origin` other than `SITE_ORIGIN` is refused.
 
@@ -52,8 +62,9 @@ With neither, sign-in answers 503 and says email isn't set up.
 | `presets` | the normalised preset, name, description, amp model, chain summary, download count, hidden flag |
 | `reports` | preset id, reporter key (user id or hashed IP), reason |
 | `rate_events` | rate-limit keys and times; cleaned up after 2 days |
+| `tester_requests` | name and email of people asking for an Android test invite; deleted when a moderator marks them invited, or after 90 days |
 
-Public API responses carry the display name, never the email. Schema: `migrations/0001_presets_hub.sql`.
+Public API responses carry the display name, never the email. Schema: `migrations/` (`0001_presets_hub.sql`, `0002_tester_requests.sql`).
 
 ## API
 
@@ -67,6 +78,9 @@ Public API responses carry the display name, never the email. Schema: `migration
 | POST | `/api/presets/:id/report` `{reason}` | anyone | |
 | POST | `/api/presets/:id/restore` | moderator | un-hide and clear reports |
 | GET | `/api/admin/hidden` | moderator | hidden presets with report counts |
+| POST | `/api/testers/request` `{name, email, consent: true}` | anyone | Android test invite request |
+| GET | `/api/admin/testers` | moderator | waiting invite requests (name, email) |
+| POST | `/api/admin/testers/invited` `{ids}` | moderator | deletes those requests |
 | POST | `/api/auth/request` `{email}` · `/api/auth/verify` `{token}` · `/api/auth/logout` | | |
 | GET / PATCH | `/api/me` `{displayName}` · GET `/api/me/presets` | signed in | |
 

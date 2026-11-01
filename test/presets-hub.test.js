@@ -294,6 +294,59 @@ test('cleanup drops expired tokens, sessions and old rate-limit rows', async () 
   }
 });
 
+test('Android test invite requests: validated, de-duplicated, moderators list and delete them', async () => {
+  const h = setup();
+  const req = (body, opts = {}) => h.call('POST', '/api/testers/request', { body, ...opts });
+  const ok = { name: 'Pat Player', email: ' Pat@Example.com ', consent: true };
+
+  assert.equal((await req({ ...ok, consent: false })).status, 400, 'consent is required');
+  assert.equal((await req({ ...ok, consent: 'yes' })).status, 400, 'consent must be a real true');
+  assert.equal((await req({ ...ok, email: 'not-an-email' })).status, 400);
+  assert.equal((await req({ ...ok, name: ' ' })).status, 400);
+  assert.equal((await req(ok, { origin: 'https://evil.example' })).status, 403);
+
+  assert.equal((await req(ok)).status, 200);
+  assert.equal((await req({ ...ok, name: 'Pat P.' }, { ip: '203.0.113.2' })).status, 200, 'asking twice is fine');
+  assert.equal((await req({ ...ok, email: 'bot@example.com', website: 'http://spam' }, { ip: '203.0.113.3' })).status, 200);
+  const rows = h.env.DB.raw.prepare('SELECT name, email FROM tester_requests').all();
+  assert.deepEqual(rows.map((r) => ({ ...r })), [{ name: 'Pat P.', email: 'pat@example.com' }], 'one row per address; honeypot stores nothing');
+
+  // Only moderators see the queue.
+  assert.equal((await h.call('GET', '/api/admin/testers')).status, 401);
+  const player = await h.signIn('player@example.com');
+  assert.equal((await h.call('GET', '/api/admin/testers', { cookie: player })).status, 403);
+  assert.equal((await h.call('POST', '/api/admin/testers/invited', { cookie: player, body: { ids: ['x'] } })).status, 403);
+  const mod = await h.signIn('mod@example.com');
+  const list = await h.call('GET', '/api/admin/testers', { cookie: mod });
+  assert.equal(list.status, 200);
+  assert.equal(list.data.items.length, 1);
+  assert.equal(list.data.items[0].email, 'pat@example.com');
+
+  // Public endpoints never expose the queue.
+  assert.doesNotMatch(JSON.stringify((await h.call('GET', '/api/presets')).data), /pat@example/);
+
+  // Marking as invited deletes the row.
+  assert.equal((await h.call('POST', '/api/admin/testers/invited', { cookie: mod, body: { ids: [] } })).status, 400);
+  const done = await h.call('POST', '/api/admin/testers/invited', { cookie: mod, body: { ids: [list.data.items[0].id] } });
+  assert.equal(done.status, 200);
+  assert.equal(h.env.DB.raw.prepare('SELECT COUNT(*) AS n FROM tester_requests').get().n, 0);
+});
+
+test('Android test invite requests are rate-limited per IP and expire after 90 days', async () => {
+  const h = setup();
+  for (let i = 0; i < 5; i++) {
+    const r = await h.call('POST', '/api/testers/request', { body: { name: 'Pat', email: `p${i}@example.com`, consent: true } });
+    assert.equal(r.status, 200);
+  }
+  assert.equal((await h.call('POST', '/api/testers/request', { body: { name: 'Pat', email: 'p9@example.com', consent: true } })).status, 429);
+
+  const day = 24 * 60 * 60 * 1000;
+  await cleanup(h.env.DB, Date.now() + 89 * day);
+  assert.equal(h.env.DB.raw.prepare('SELECT COUNT(*) AS n FROM tester_requests').get().n, 5, 'kept for 90 days');
+  await cleanup(h.env.DB, Date.now() + 91 * day);
+  assert.equal(h.env.DB.raw.prepare('SELECT COUNT(*) AS n FROM tester_requests').get().n, 0, 'then dropped');
+});
+
 test('normalisePreset rejects junk effect names and parameters', () => {
   const p = samplePreset();
   assert.throws(() => normalisePreset({ ...p, Name: '' }), /no name/);

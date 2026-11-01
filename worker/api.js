@@ -18,6 +18,7 @@ const MAX_PAGE = 100;
 const REPORTS_TO_HIDE = 3;
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
+const TESTER_REQUEST_TTL = 90 * DAY; // unhandled Android test requests are dropped after this
 
 export async function handleApi(request, env, ctx, now = Date.now()) {
   const url = new URL(request.url);
@@ -77,6 +78,26 @@ export async function handleApi(request, env, ctx, now = Date.now()) {
       if (action === 'restore' && method === 'POST') return await restorePreset(env, request, id, now);
     }
 
+    // ---- Android test invites (Google Play internal testing)
+    if (path === '/api/testers/request' && method === 'POST') return await requestTesterInvite(request, env, now);
+    if (path === '/api/admin/testers' && method === 'GET') {
+      await requireAdmin(env, request, now);
+      const { results } = await env.DB.prepare(
+        'SELECT id, name, email, created_at AS createdAt FROM tester_requests ORDER BY created_at LIMIT 500',
+      ).all();
+      return json({ items: results });
+    }
+    if (path === '/api/admin/testers/invited' && method === 'POST') {
+      await requireAdmin(env, request, now);
+      const { ids } = await readJson(request, 32 * 1024);
+      if (!Array.isArray(ids) || !ids.length || ids.length > 500 || !ids.every((id) => typeof id === 'string' && id.length <= 32)) {
+        throw new HttpError(400, 'Send the ids of the requests you have invited.');
+      }
+      const del = env.DB.prepare('DELETE FROM tester_requests WHERE id = ?');
+      for (const id of ids) await del.bind(id).run();
+      return json({ ok: true });
+    }
+
     // ---- moderation
     if (path === '/api/admin/hidden' && method === 'GET') {
       await requireAdmin(env, request, now);
@@ -111,6 +132,28 @@ async function requestSignIn(request, env, origin, now) {
   const sent = await sendSignInEmail(env, email, link);
   // Same answer whether or not the address has an account.
   return json({ ok: true, ...(sent.devLink ? { devLink: sent.devLink } : {}) });
+}
+
+async function requestTesterInvite(request, env, now) {
+  const body = await readJson(request);
+  // Honeypot: a field people never see. Bots that fill it get a normal answer and nothing is stored.
+  if (typeof body.website === 'string' && body.website.trim()) return json({ ok: true });
+  const name = cleanText(body.name, 80);
+  if (name.length < 2) throw new HttpError(400, 'Enter your name.');
+  const email = normaliseEmail(body.email);
+  if (!email) throw new HttpError(400, 'Enter a valid email address.');
+  if (body.consent !== true) throw new HttpError(400, 'Please agree to us using your name and email to send the invite.');
+  if (!(await rateLimit(env.DB, `tester:${await clientKey(request, env)}`, 5, HOUR, now))) {
+    throw new HttpError(429, 'Too many requests. Wait a while and try again.');
+  }
+  // Asking again just refreshes the name and keeps the place in the queue.
+  await env.DB.prepare(
+    `INSERT INTO tester_requests (id, name, email, created_at) VALUES (?, ?, ?, ?)
+     ON CONFLICT(email) DO UPDATE SET name = excluded.name`,
+  )
+    .bind(randomToken(12), name, email, now)
+    .run();
+  return json({ ok: true });
 }
 
 async function listPresets(env, url) {
@@ -233,6 +276,7 @@ export async function cleanup(db, now) {
   await db.prepare('DELETE FROM login_tokens WHERE expires_at < ?').bind(now - DAY).run();
   await db.prepare('DELETE FROM sessions WHERE expires_at < ?').bind(now).run();
   await db.prepare('DELETE FROM rate_events WHERE at < ?').bind(now - 2 * DAY).run();
+  await db.prepare('DELETE FROM tester_requests WHERE created_at < ?').bind(now - TESTER_REQUEST_TTL).run();
 }
 
 // ---------------------------------------------------------------------------- helpers

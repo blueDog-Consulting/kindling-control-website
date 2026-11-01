@@ -52,7 +52,7 @@
           <a class="btn btn-primary" href="https://github.com/bluedog-consulting/kindling-control-spark-amps/releases/latest">Download for desktop &amp; Android (test)</a>
           <a class="btn" href="presets/">Browse shared presets</a>
         </div>
-        <p class="fine">For Windows, macOS, Linux and Android. An iPad and iPhone app is planned. Android early access: <a href="https://play.google.com/apps/internaltest/4700407217953087836">join the private test group on Google Play</a>.</p>
+        <p class="fine">For Windows, macOS, Linux and Android. An iPad and iPhone app is planned.<span class="invite-cta" hidden> Android early access on Google Play is invite-only: <button type="button" class="linkish" data-invite>request an invite</button>.</span></p>
       </div>
       <div class="hero-shots">
         <figure class="device device-desktop">
@@ -153,7 +153,7 @@
         </li>
         <li>
           <h3>Install KindlingControl</h3>
-          <p>Download the <a href="https://github.com/bluedog-consulting/kindling-control-spark-amps/releases/latest">desktop app</a> for Windows, macOS or Linux, or the Android app, from the releases page. To try the Android app through Google Play instead, <a href="https://play.google.com/apps/internaltest/4700407217953087836">join the private testing group</a>.</p>
+          <p>Download the <a href="https://github.com/bluedog-consulting/kindling-control-spark-amps/releases/latest">desktop app</a> for Windows, macOS or Linux, or the Android app, from the releases page.<span class="invite-cta" hidden> Prefer Google Play? The Android test there is invite-only, so <button type="button" class="linkish" data-invite>request an invite</button>.</span></p>
         </li>
         <li>
           <h3>Connect</h3>
@@ -169,7 +169,7 @@
           <caption>Where it runs</caption>
           <thead><tr><th scope="col">Device</th><th scope="col">How</th></tr></thead>
           <tbody>
-            <tr><th scope="row">Android</th><td>The Android app (<a href="https://play.google.com/apps/internaltest/4700407217953087836">private test on Google Play</a>)</td></tr>
+            <tr><th scope="row">Android</th><td>The Android app<span class="invite-cta" hidden> (Google Play test: <button type="button" class="linkish" data-invite>request an invite</button>)</span></td></tr>
             <tr><th scope="row">Windows · macOS · Linux</th><td>The desktop app</td></tr>
             <tr><th scope="row">iPad · iPhone</th><td>Native app (planned)</td></tr>
           </tbody>
@@ -241,7 +241,8 @@
         <summary>Does it collect any data?</summary>
         <p>The app doesn't. There's no account and no analytics, and your presets stay on your device unless you export them.
           If you share presets on the <a href="presets/">presets hub</a>, we keep your email address to send you sign-in links (it's never shown to anyone),
-          the display name you choose, and the presets you upload. Browsing and downloading presets needs no sign-in.</p>
+          the display name you choose, and the presets you upload. Browsing and downloading presets needs no sign-in.
+          If you ask for an invite to the Android test on Google Play, we keep your name and email address only until you've been added to the testers list, and delete unhandled requests after 90 days.</p>
       </details>
     </section>
   </main>
@@ -258,6 +259,36 @@
       only describe what each model sounds like.
     </p>
   </footer>
+
+  <dialog id="invite" aria-labelledby="invite-title">
+    <form id="invite-form" novalidate>
+      <h2 id="invite-title">Request an Android test invite</h2>
+      <p>The Android test on Google Play is invite-only. Leave your name and the email address of the Google account you use on Google Play, and we'll add you to the testers list.</p>
+      <label for="invite-name">Name</label>
+      <input id="invite-name" name="name" autocomplete="name" maxlength="80" required autofocus>
+      <label for="invite-email">Google account email</label>
+      <input id="invite-email" name="email" type="email" autocomplete="email" maxlength="254" required>
+      <div class="invite-hp" aria-hidden="true">
+        <label for="invite-website">Leave this empty</label>
+        <input id="invite-website" name="website" tabindex="-1" autocomplete="off">
+      </div>
+      <label class="check"><input id="invite-consent" name="consent" type="checkbox" required> I agree to KindlingControl using my name and email address to invite me to the Google Play test.</label>
+      <p class="fine">We only use these details to send your invite. Your email address isn't kept once you've been added to the testing invitation, and a request we haven't acted on is deleted after 90 days.</p>
+      <p class="invite-status" id="invite-status" role="status"></p>
+      <div class="invite-actions">
+        <button type="submit" class="btn btn-primary">Send request</button>
+        <button type="button" class="btn" data-invite-close>Cancel</button>
+      </div>
+    </form>
+    <div id="invite-done" hidden>
+      <h2 id="invite-done-title">Thanks, request received</h2>
+      <p>We'll add your Google account to the testers list. Once that's done, open the <a href="https://play.google.com/apps/internaltest/4700407217953087836">Google Play test link</a> on your Android device to join and install the app.</p>
+      <div class="invite-actions">
+        <button type="button" class="btn btn-primary" data-invite-close>Close</button>
+      </div>
+    </div>
+  </dialog>
+  <script type="module" src="invite.js"></script>
 
   <a class="to-top" href="#top" hidden><span aria-hidden="true">↑</span> Top</a>
   <script>
