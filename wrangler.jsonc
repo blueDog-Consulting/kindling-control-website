@@ -6,7 +6,7 @@
 {
   // Wrangler isn't installed locally (it's pinned in the npm scripts), so use the published schema.
   // "$schema": "./node_modules/wrangler/config-schema.json",
-  "$schema": "https://unpkg.com/wrangler@4.151.3/config-schema.json",
+  "$schema": "https://unpkg.com/wrangler@4.156.0/config-schema.json",
   "name": "kindling-control-website",
   "main": "worker/index.js",
   "compatibility_date": "2026-10-01",

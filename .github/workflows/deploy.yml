@@ -35,10 +35,10 @@ jobs:
         run: node tools/build.js
       - name: Apply database migrations
         if: env.CLOUDFLARE_API_TOKEN != ''
-        run: npx --yes wrangler@4.151.3 d1 migrations apply kindling-presets --remote
+        run: npx --yes wrangler@4.156.0 d1 migrations apply kindling-presets --remote
       - name: Deploy to Cloudflare
         if: env.CLOUDFLARE_API_TOKEN != ''
-        run: npx --yes wrangler@4.151.3 deploy
+        run: npx --yes wrangler@4.156.0 deploy
       - name: Note skipped deploy
         if: env.CLOUDFLARE_API_TOKEN == ''
         run: echo "::notice::CLOUDFLARE_API_TOKEN is not set; tested and built the website but skipped the Cloudflare deploy."
