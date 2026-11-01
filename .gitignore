@@ -5,5 +5,4 @@ dist/
 *.log
 .env.*
 .env
-.dev.vars
 .DS_Store

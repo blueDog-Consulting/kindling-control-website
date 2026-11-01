@@ -75,7 +75,7 @@ Public API responses carry the display name, never the email. Schema: `migration
 npm run dev          # build dist/, then serve site + API on http://localhost:8788
 ```
 
-`tools/serve.js` runs the real Worker code against an in-memory SQLite database (`tools/d1-sqlite.js`, Node 24's `node:sqlite`). Sign-in links appear on the page. The moderator is `admin@localhost.test` (override with `ADMIN_EMAILS=…`). The data disappears when it stops.
+`tools/serve.js` runs the real Worker code against an in-memory SQLite database (`tools/d1-sqlite.js`, built on Node's `node:sqlite`). Sign-in links appear on the page. The moderator is `admin@localhost.test` (override with `ADMIN_EMAILS=…`). The data disappears when it stops.
 
 `test/presets-hub.test.js` covers the API the same way. For a closer match to Cloudflare, `npx wrangler dev` runs the Worker with a local D1 database (`npx wrangler d1 migrations apply kindling-presets --local` first).
 
