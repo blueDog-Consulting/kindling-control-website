@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: npm test
+      - name: Check files shared with the app
+        run: node tools/check-vendor.js
+      - name: Build
+        run: node tools/build.js
+
+  docs:
+    # Material changes must update the docs and AGENTS.md (see AGENTS.md, "Documentation rule").
+    if: github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Material changes update the docs and AGENTS.md
+        env:
+          DOCS_NOT_NEEDED: ${{ contains(github.event.pull_request.labels.*.name, 'docs-not-needed') && 'PR label docs-not-needed' || '' }}
+          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+        run: node tools/check-docs.js "$BASE"

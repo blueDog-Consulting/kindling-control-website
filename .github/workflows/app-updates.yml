@@ -1,0 +1,24 @@
+name: App updates
+
+# Once a week, checks whether the app repo changed any file the website shares
+# (vendor/app/: preset code, user guide, icons) since the last `npm run sync:app`.
+# It only warns; syncing is a deliberate step, reviewed like any other change.
+
+on:
+  schedule:
+    - cron: '23 7 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Compare vendor/app/ with the app's main branch
+        run: node tools/check-vendor.js --upstream main

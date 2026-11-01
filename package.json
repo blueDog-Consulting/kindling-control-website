@@ -1,0 +1,26 @@
+{
+  "name": "kindling-control-website",
+  "version": "0.0.0",
+  "private": true,
+  "description": "kindlingspark.app: the KindlingControl landing page, user guide and presets hub (Cloudflare Workers + D1).",
+  "license": "GPL-3.0-or-later",
+  "author": "blueDog Consulting",
+  "homepage": "https://kindlingspark.app",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bluedog-consulting/kindling-control-website"
+  },
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "build": "node tools/build.js",
+    "dev": "node tools/build.js && node tools/serve.js",
+    "deploy": "node tools/build.js && npx --yes wrangler@4.151.3 d1 migrations apply kindling-presets --remote && npx --yes wrangler@4.151.3 deploy",
+    "sync:app": "node tools/sync-app.js",
+    "check:vendor": "node tools/check-vendor.js",
+    "check:docs": "node tools/check-docs.js"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
