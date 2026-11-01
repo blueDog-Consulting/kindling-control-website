@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Local preview of kindlingspark.app: the built site (dist/) plus the presets
+// Local preview of kindlingcontrol.app: the built site (dist/) plus the presets
 // API (worker/) running against an in-memory SQLite database. No wrangler or
 // Cloudflare account needed. Sign-in links are shown on the page instead of emailed.
 //
@@ -71,4 +71,4 @@ createServer(async (req, res) => {
   if (cookies.length) headers['set-cookie'] = cookies;
   res.writeHead(response.status, headers);
   res.end(Buffer.from(await response.arrayBuffer()));
-}).listen(port, () => console.log(`kindlingspark.app preview on http://localhost:${port}  (presets API with an in-memory database; moderator: ${env.ADMIN_EMAILS})`));
+}).listen(port, () => console.log(`kindlingcontrol.app preview on http://localhost:${port}  (presets API with an in-memory database; moderator: ${env.ADMIN_EMAILS})`));

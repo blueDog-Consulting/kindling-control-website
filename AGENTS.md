@@ -15,7 +15,7 @@ Guidance for AI coding agents and human contributors working on this repository.
 
 ## What this is
 
-The website for **KindlingControl**, an open controller for Positive Grid Spark amps: **https://kindlingspark.app**.
+The website for **KindlingControl**, an open controller for Positive Grid Spark amps: **https://kindlingcontrol.app**.
 
 - © 2026 **blueDog Consulting and Jeremy Meiss** (blueDog Consulting builds and maintains it).
 - Licence **GPL-3.0-or-later**, the same as the app. `LICENSE` is the verbatim GPLv3 text; never edit it.
@@ -52,7 +52,7 @@ docs/PRESETS.md       hub design, API, privacy, Cloudflare setup
 ## Commands
 
 ```sh
-npm test                 # all tests (Node 22+: node:sqlite)
+npm test                 # all tests (Node 24+: node:sqlite)
 npm run dev              # build + serve site and API on http://localhost:8788 (in-memory DB)
 npm run build            # dist/
 npm run sync:app [-- <ref> | --from <checkout>] [--screenshots]   # refresh vendor/app/ from the app repo
@@ -101,6 +101,6 @@ npm run deploy           # build + D1 migrations + wrangler deploy (needs the se
 
 ## Conventions
 
-- No runtime dependencies and no framework: plain ES modules, DOM and Workers APIs. Wrangler is pinned in the scripts (`wrangler@4.151.3`) rather than installed.
+- No runtime dependencies and no framework: plain ES modules, DOM and Workers APIs. Wrangler is pinned in the scripts (`wrangler@4.156.0`) rather than installed.
 - Formatting: 2-space indent, single quotes, semicolons, trailing commas, lines up to about 120 characters.
 - Git: `main` is the primary branch. Keep commits focused, and explain *why* in the message.

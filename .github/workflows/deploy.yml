@@ -1,6 +1,6 @@
 name: Deploy
 
-# Deploys kindlingspark.app (landing page, user guide, presets hub + API) to
+# Deploys kindlingcontrol.app (landing page, user guide, presets hub + API) to
 # Cloudflare Workers on every push to main. Without the CLOUDFLARE_API_TOKEN
 # secret it only tests and builds. Setup (D1 database, email, secrets): docs/PRESETS.md.
 
@@ -26,7 +26,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
       - name: Test
         run: npm test
       - name: Check files shared with the app
@@ -35,10 +35,10 @@ jobs:
         run: node tools/build.js
       - name: Apply database migrations
         if: env.CLOUDFLARE_API_TOKEN != ''
-        run: npx --yes wrangler@4.151.3 d1 migrations apply kindling-presets --remote
+        run: npx --yes wrangler@4.156.0 d1 migrations apply kindling-presets --remote
       - name: Deploy to Cloudflare
         if: env.CLOUDFLARE_API_TOKEN != ''
-        run: npx --yes wrangler@4.151.3 deploy
+        run: npx --yes wrangler@4.156.0 deploy
       - name: Note skipped deploy
         if: env.CLOUDFLARE_API_TOKEN == ''
         run: echo "::notice::CLOUDFLARE_API_TOKEN is not set; tested and built the website but skipped the Cloudflare deploy."

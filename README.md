@@ -6,7 +6,7 @@
 [![Deploy](https://github.com/bluedog-consulting/kindling-control-website/actions/workflows/deploy.yml/badge.svg?branch=main)](https://github.com/bluedog-consulting/kindling-control-website/actions/workflows/deploy.yml)
 [![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue)](LICENSE)
 
-The source of **[kindlingspark.app](https://kindlingspark.app)**, the home of [KindlingControl](https://github.com/bluedog-consulting/kindling-control-spark-amps), an open controller for Positive Grid Spark amps. The app lives in its own repository, so anyone can fork it without inheriting the website.
+The source of **[kindlingcontrol.app](https://kindlingcontrol.app)**, the home of [KindlingControl](https://github.com/bluedog-consulting/kindling-control-spark-amps), an open controller for Positive Grid Spark amps. The app lives in its own repository, so anyone can fork it without inheriting the website.
 
 | Path | What |
 |---|---|
@@ -19,7 +19,7 @@ It runs on **Cloudflare Workers** (static assets plus a small Worker) with a **D
 
 ## Develop
 
-Needs Node 22+.
+Needs Node 24+.
 
 ```sh
 npm test            # node:test: the presets API against SQLite, plus the docs check

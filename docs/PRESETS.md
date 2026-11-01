@@ -1,6 +1,6 @@
-# Website and presets hub (kindlingspark.app)
+# Website and presets hub (kindlingcontrol.app)
 
-kindlingspark.app is one Cloudflare Worker with static assets:
+kindlingcontrol.app is one Cloudflare Worker with static assets:
 
 | Path | What | Source |
 |---|---|---|
@@ -75,15 +75,15 @@ Public API responses carry the display name, never the email. Schema: `migration
 npm run dev          # build dist/, then serve site + API on http://localhost:8788
 ```
 
-`tools/serve.js` runs the real Worker code against an in-memory SQLite database (`tools/d1-sqlite.js`, Node 22's `node:sqlite`). Sign-in links appear on the page. The moderator is `admin@localhost.test` (override with `ADMIN_EMAILS=…`). The data disappears when it stops.
+`tools/serve.js` runs the real Worker code against an in-memory SQLite database (`tools/d1-sqlite.js`, built on Node's `node:sqlite`). Sign-in links appear on the page. The moderator is `admin@localhost.test` (override with `ADMIN_EMAILS=…`). The data disappears when it stops.
 
 `test/presets-hub.test.js` covers the API the same way. For a closer match to Cloudflare, `npx wrangler dev` runs the Worker with a local D1 database (`npx wrangler d1 migrations apply kindling-presets --local` first).
 
 ## Setting up Cloudflare (once)
 
-1. **Domain:** add `kindlingspark.app` to your Cloudflare account as a zone. `wrangler deploy` then attaches `kindlingspark.app` and `www.kindlingspark.app` as custom domains (`routes` in `wrangler.jsonc`).
+1. **Domain:** add `kindlingcontrol.app` to your Cloudflare account as a zone. `wrangler deploy` then attaches `kindlingcontrol.app` and `www.kindlingcontrol.app` as custom domains (`routes` in `wrangler.jsonc`).
 2. **Database:** `npx wrangler d1 create kindling-presets`, and paste the printed `database_id` into `wrangler.jsonc`.
-3. **Email:** onboard `kindlingspark.app` to Cloudflare Email Service, then uncomment the `send_email` binding. Alternatively, `npx wrangler secret put RESEND_API_KEY`.
+3. **Email:** onboard `kindlingcontrol.app` to Cloudflare Email Service, the `send_email` binding in `wrangler.jsonc` is already enabled. Alternatively, `npx wrangler secret put RESEND_API_KEY`.
 4. **Secrets:** `npx wrangler secret put ADMIN_EMAILS` (moderators, comma-separated) and `npx wrangler secret put IP_HASH_SALT` (any long random string).
 5. **CI:** add these secrets to this repository `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`. The token needs Workers Scripts: Edit, D1: Edit and, for the custom domain, Workers Routes: Edit on the zone.
 

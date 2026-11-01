@@ -1,4 +1,4 @@
-// Cloudflare Worker for kindlingspark.app.
+// Cloudflare Worker for kindlingcontrol.app.
 //
 // Static files (landing page, user guide, presets hub pages) come from dist/
 // through the ASSETS binding. This script only handles the presets API under

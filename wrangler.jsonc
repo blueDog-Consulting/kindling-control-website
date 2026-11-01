@@ -1,39 +1,67 @@
-// kindlingspark.app on Cloudflare Workers. Deployed by .github/workflows/deploy.yml on pushes to main,
+// kindlingcontrol.app on Cloudflare Workers. Deployed by .github/workflows/deploy.yml on pushes to main,
 // or by hand with `npm run deploy`. Setup steps (D1 database, email, secrets): docs/PRESETS.md.
 //
 // dist/ (tools/build.js) holds the landing page, the user guide at /guide/ and the presets hub
 // pages. worker/index.js runs only for /api/* (the presets API) and www redirects.
 {
+  // Wrangler isn't installed locally (it's pinned in the npm scripts), so use the published schema.
+  // "$schema": "./node_modules/wrangler/config-schema.json",
+  "$schema": "https://unpkg.com/wrangler@4.156.0/config-schema.json",
   "name": "kindling-control-website",
   "main": "worker/index.js",
-  "compatibility_date": "2025-09-01",
+  "compatibility_date": "2026-10-01",
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
-    "run_worker_first": ["/api/*"]
+    "run_worker_first": [
+      "/api/*"
+    ]
   },
   "routes": [
-    { "pattern": "kindlingspark.app", "custom_domain": true },
-    { "pattern": "www.kindlingspark.app", "custom_domain": true }
+    {
+      "pattern": "kindlingcontrol.app",
+      "custom_domain": true
+    },
+    {
+      "pattern": "www.kindlingcontrol.app",
+      "custom_domain": true
+    }
   ],
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "kindling-presets",
-      // Replace with the id printed by `npx wrangler d1 create kindling-presets`.
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      // Created with `npx wrangler d1 create kindling-presets`.
+      "database_id": "5de6899d-fc60-4461-a070-0ca7ce18f837",
       "migrations_dir": "migrations"
     }
   ],
-  // Cloudflare Email Service sends the sign-in links. Uncomment once kindlingspark.app is
-  // onboarded to Email Service (or set the RESEND_API_KEY secret instead).
-  // "send_email": [{ "name": "EMAIL" }],
+  // Cloudflare Email Service sends the sign-in links (kindlingcontrol.app is onboarded).
+  // worker/mail.js uses this binding first; RESEND_API_KEY is only used if the binding is removed.
+  "send_email": [{ "name": "EMAIL" }],
   "vars": {
-    "SITE_ORIGIN": "https://kindlingspark.app",
-    "MAIL_FROM": "KindlingControl <presets@kindlingspark.app>"
+    "SITE_ORIGIN": "https://kindlingcontrol.app",
+    "MAIL_FROM": "KindlingControl <presets@kindlingcontrol.app>"
   },
   // Secrets (npx wrangler secret put …): ADMIN_EMAILS (moderators, comma-separated),
   // IP_HASH_SALT (any random string), and RESEND_API_KEY if you use Resend.
-  "triggers": { "crons": ["17 4 * * *"] },
-  "observability": { "enabled": true }
+  "triggers": {
+    "crons": [
+      "17 4 * * *"
+    ]
+  },
+  // Every request is logged; traces are sampled at 10% to keep storage and cost down.
+  "observability": {
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "invocation_logs": true,
+      "persist": true
+    },
+    "traces": {
+      "enabled": true,
+      "head_sampling_rate": 0.1,
+      "persist": true
+    }
+  }
 }
