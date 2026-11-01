@@ -36,7 +36,7 @@ The request endpoint gives the same answer for new and existing addresses, and i
 
 `worker/mail.js` sends through Cloudflare Email Service; there's no third-party provider:
 
-1. **Cloudflare Email Service:** a `send_email` binding named `EMAIL` (enabled in `wrangler.jsonc`). The sender `MAIL_FROM` must be on a domain onboarded to Email Service. **(unverified)** The call (`env.EMAIL.send({ to: [{ email }], from: { email, name }, subject, text, html })`) follows Cloudflare's published examples, but it hasn't yet sent a message from a live account. If the call throws, the Worker logs `Email Service send failed: <name>: <code>: <message>` (never the recipient). Sign-in then answers 503, "Couldn't send the sign-in email".
+1. **Cloudflare Email Service:** a `send_email` binding named `EMAIL` (enabled in `wrangler.jsonc`). The sender `MAIL_FROM` must be on a domain onboarded to Email Service. The call is `env.EMAIL.send({ to: 'person@example.com', from: { email, name }, subject, text, html })`. Cloudflare's `EmailAddress` objects need both `email` and `name` as strings (a missing `name` throws a `TypeError`), so the recipient is a plain address string, and so is the sender when `MAIL_FROM` has no display name. If the call throws, the Worker logs `Email Service send failed: <name>: <code>: <message>` (never the recipient). Sign-in then answers 503, "Couldn't send the sign-in email".
 2. **Development:** `DEV_SHOW_LINKS=1` returns the link to the page instead of sending it. `tools/serve.js` sets this. Never set it in production.
 
 With none configured, sign-in answers 503 and says email isn't set up.

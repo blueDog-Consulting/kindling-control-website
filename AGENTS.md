@@ -78,7 +78,7 @@ npm run deploy           # build + D1 migrations + wrangler deploy (needs the se
   - Hub pages are plain DOM ES modules under a strict CSP (`site/_headers`): no inline script or style on `/presets/*`. Render user content with `textContent` only, never `innerHTML`.
   - `[hidden]` is forced to `display: none` in `presets.css`, because component rules set `display`.
 - **Moderation:** 3 reports hide a preset; moderators (`ADMIN_EMAILS` secret) restore or delete it. Rate limits live in D1 (`rate_events`).
-- **Email:** Cloudflare Email Service (`send_email` binding `EMAIL`) only; Resend and other providers aren't used. Dev mode (`DEV_SHOW_LINKS=1`) is local only, never in production. If Email Service throws, `mail.js` logs the error (never the recipient) and sign-in answers 503. Send failures are never a bare 500. The Email Service call is **unverified** against a live account: the first live sign-in returned a 500, so check the `Email Service send failed:` log line.
+- **Email:** Cloudflare Email Service (`send_email` binding `EMAIL`) only; Resend and other providers aren't used. Dev mode (`DEV_SHOW_LINKS=1`) is local only, never in production. If Email Service throws, `mail.js` logs the error (never the recipient) and sign-in answers 503. Send failures are never a bare 500. `EmailAddress` objects need `name` as a string, so the recipient goes as a plain address string (the first live sign-in failed on `to: [{ email }]`). Check the `Email Service send failed:` log line if sending breaks.
 - **Schema changes** go in a **new** numbered migration. Deploys apply them before `wrangler deploy`.
 
 ## Landing page

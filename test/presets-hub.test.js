@@ -119,15 +119,25 @@ test('without an email provider, sign-in fails clearly instead of pretending', a
 test('the Cloudflare Email Service binding is used when configured', async () => {
   const h = setup();
   const sent = [];
-  h.env.EMAIL = { send: async (msg) => sent.push(msg) };
+  h.env.EMAIL = strictEmailBinding(sent);
   h.env.MAIL_FROM = 'KindlingControl <presets@kindlingcontrol.app>';
   const r = await h.call('POST', '/api/auth/request', { body: { email: 'a@example.com' } });
   assert.equal(r.status, 200);
   assert.equal(r.data.devLink, undefined, 'the link is never returned when real email is configured');
   assert.equal(sent.length, 1);
-  assert.deepEqual(sent[0].to, [{ email: 'a@example.com' }]);
+  assert.equal(sent[0].to, 'a@example.com');
   assert.deepEqual(sent[0].from, { email: 'presets@kindlingcontrol.app', name: 'KindlingControl' });
   assert.match(sent[0].text, /https:\/\/kindlingcontrol\.app\/presets\/signin\.html#token=/);
+});
+
+test('a MAIL_FROM without a display name is sent as a plain address', async () => {
+  const h = setup();
+  const sent = [];
+  h.env.EMAIL = strictEmailBinding(sent);
+  h.env.MAIL_FROM = 'presets@kindlingcontrol.app';
+  const r = await h.call('POST', '/api/auth/request', { body: { email: 'a@example.com' } });
+  assert.equal(r.status, 200);
+  assert.equal(sent[0].from, 'presets@kindlingcontrol.app');
 });
 
 test('an Email Service failure is a clear 503, not a 500', async () => {
@@ -296,3 +306,20 @@ test('normalisePreset rejects junk effect names and parameters', () => {
   const noUuid = { ...p, UUID: 'nope' };
   assert.match(normalisePreset(noUuid).preset.UUID, /^[0-9A-F-]{36}$/);
 });
+
+// Mirrors the live binding's checks: an address is a string, or an EmailAddress object whose
+// email and name are both strings (a missing name throws a TypeError on Cloudflare).
+function strictEmailBinding(sent) {
+  const check = (field, v) => {
+    if (typeof v === 'string') return;
+    if (v && typeof v === 'object' && typeof v.email === 'string' && typeof v.name === 'string') return;
+    throw new TypeError(`Incorrect type for '${field}'`);
+  };
+  return {
+    async send(msg) {
+      check('from', msg.from);
+      for (const t of Array.isArray(msg.to) ? msg.to : [msg.to]) check('to', t);
+      sent.push(msg);
+    },
+  };
+}
