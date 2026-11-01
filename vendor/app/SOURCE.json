@@ -1,13 +1,13 @@
 {
   "repo": "https://github.com/bluedog-consulting/kindling-control-spark-amps",
   "ref": "main",
-  "commit": "4339f96059f8998e2aa3fcc5f6f0c186d1adb5ac",
+  "commit": "3e987acf00a1313a28dd3cbf51b41114248f1702",
   "files": {
-    "spark/messages.js": "301cd36781f632edb85de95b50460a2060b5e341b5c6e2c9670bba05a672d8de",
+    "spark/messages.js": "15cb521a08dbc3834956193928e2d3292c77c620f7ce811e509f01538a96965e",
     "spark/codec.js": "cc1b262c1cb30a9a473cf5539944922d75ce96908ca3bef81dfe334415bdb163",
     "spark/constants.js": "d4be5abfaf2ebd303c84b822c233e4820a564ce6340fe63eb5615c3aea20521d",
     "spark/effects.js": "223dd8cbf16b31c10ac14d657446d6d005e746b8876480ce21a38ce3da2a23dc",
-    "guide/index.html": "cc6114a2bd42ac6046c533eec7bbf1abff1a93b7a9c0c29031f0b1e871bfc5c5",
+    "guide/index.html": "29f383629471c9a058864ac69f3f8d4985b362dcdca4bcfb107736602c4748c7",
     "guide/guide.css": "733726aee17f6c5283678c528a09112e6100d6fcdac86e62600abde8835b4559",
     "icon.svg": "f7bb62e544f821e07237b78d4da97dde10d1ff54e9fa93083a3412e39a34cd5b",
     "icons/apple-touch-icon.png": "b3b7b1b0ecf636bbaf6cdc3fba2a142e416db619573118997fffa1474103cd35"
