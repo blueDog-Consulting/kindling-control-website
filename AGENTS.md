@@ -15,7 +15,7 @@ Guidance for AI coding agents and human contributors working on this repository.
 
 ## What this is
 
-The website for **KindlingControl**, an open controller for Positive Grid Spark amps: **https://kindlingspark.app**.
+The website for **KindlingControl**, an open controller for Positive Grid Spark amps: **https://kindlingcontrol.app**.
 
 - © 2026 **blueDog Consulting and Jeremy Meiss** (blueDog Consulting builds and maintains it).
 - Licence **GPL-3.0-or-later**, the same as the app. `LICENSE` is the verbatim GPLv3 text; never edit it.

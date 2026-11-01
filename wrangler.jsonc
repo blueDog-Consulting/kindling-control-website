@@ -1,4 +1,4 @@
-// kindlingspark.app on Cloudflare Workers. Deployed by .github/workflows/deploy.yml on pushes to main,
+// kindlingcontrol.app on Cloudflare Workers. Deployed by .github/workflows/deploy.yml on pushes to main,
 // or by hand with `npm run deploy`. Setup steps (D1 database, email, secrets): docs/PRESETS.md.
 //
 // dist/ (tools/build.js) holds the landing page, the user guide at /guide/ and the presets hub
