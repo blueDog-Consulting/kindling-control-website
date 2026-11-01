@@ -37,14 +37,13 @@
     }
   ],
   // Cloudflare Email Service sends the sign-in links (kindlingcontrol.app is onboarded).
-  // worker/mail.js uses this binding first; RESEND_API_KEY is only used if the binding is removed.
   "send_email": [{ "name": "EMAIL" }],
   "vars": {
     "SITE_ORIGIN": "https://kindlingcontrol.app",
     "MAIL_FROM": "KindlingControl <presets@kindlingcontrol.app>"
   },
   // Secrets (npx wrangler secret put …): ADMIN_EMAILS (moderators, comma-separated),
-  // IP_HASH_SALT (any random string), and RESEND_API_KEY if you use Resend.
+  // and IP_HASH_SALT (any random string).
   "triggers": {
     "crons": [
       "17 4 * * *"

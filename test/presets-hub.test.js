@@ -130,6 +130,23 @@ test('the Cloudflare Email Service binding is used when configured', async () =>
   assert.match(sent[0].text, /https:\/\/kindlingcontrol\.app\/presets\/signin\.html#token=/);
 });
 
+test('an Email Service failure is a clear 503, not a 500', async () => {
+  const h = setup();
+  delete h.env.DEV_SHOW_LINKS;
+  h.env.EMAIL = { send: async () => { throw Object.assign(new Error('sender not verified'), { code: 'E_SENDER' }); } };
+  const logged = [];
+  const orig = console.error;
+  console.error = (...a) => logged.push(a.join(' '));
+  try {
+    const r = await h.call('POST', '/api/auth/request', { body: { email: 'a@example.com' } });
+    assert.equal(r.status, 503);
+  } finally {
+    console.error = orig;
+  }
+  assert.ok(logged.some((l) => /Email Service send failed: Error: E_SENDER: sender not verified/.test(l)));
+  assert.ok(!logged.some((l) => l.includes('a@example.com')), 'the recipient is never logged');
+});
+
 test('uploading needs a session and the CC0 agreement, and validates the file', async () => {
   const h = setup();
   assert.equal((await upload(h, undefined)).status, 401);
