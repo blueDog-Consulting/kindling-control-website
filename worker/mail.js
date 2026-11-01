@@ -28,7 +28,9 @@ export async function sendSignInEmail(env, to, link) {
 
   if (env.EMAIL && typeof env.EMAIL.send === 'function') {
     try {
-      await env.EMAIL.send({ to: [{ email: to }], from, subject, text, html });
+      // EmailAddress objects need both email and name as strings, so the recipient goes as a
+      // plain address, and so does the sender when MAIL_FROM has no display name.
+      await env.EMAIL.send({ to, from: from.name ? from : from.email, subject, text, html });
     } catch (err) {
       // Log what Email Service said (never the recipient) so the Worker logs show why,
       // e.g. an unverified sender domain.
@@ -51,7 +53,7 @@ function describeError(err) {
 
 function parseAddress(s) {
   const m = /^\s*(.*?)\s*<([^>]+)>\s*$/.exec(s);
-  return m ? { email: m[2], name: m[1] || undefined } : { email: s.trim() };
+  return m && m[1] ? { email: m[2], name: m[1] } : { email: m ? m[2] : s.trim() };
 }
 
 function escapeHtml(s) {
