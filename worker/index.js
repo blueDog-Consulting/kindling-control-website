@@ -2,8 +2,11 @@
 //
 // Static files (landing page, user guide, presets hub pages) come from dist/
 // through the ASSETS binding. This script only handles the presets API under
-// /api/ (see wrangler.jsonc "run_worker_first"), redirects www to the apex
-// domain, and runs a daily cleanup.
+// /api/ (see wrangler.jsonc "run_worker_first") and runs a daily cleanup.
+//
+// www -> apex is a Cloudflare Redirect Rule on the zone (docs/PRESETS.md), because
+// static pages never reach this script. The check below is only a fallback for
+// /api/ requests if that rule is ever missing.
 
 import { cleanup, handleApi } from './api.js';
 

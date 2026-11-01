@@ -2,7 +2,7 @@
 // or by hand with `npm run deploy`. Setup steps (D1 database, email, secrets): docs/PRESETS.md.
 //
 // dist/ (tools/build.js) holds the landing page, the user guide at /guide/ and the presets hub
-// pages. worker/index.js runs only for /api/* (the presets API) and www redirects.
+// pages. worker/index.js runs only for /api/* (the presets API); www -> apex is a zone Redirect Rule.
 {
   // Wrangler isn't installed locally (it's pinned in the npm scripts), so use the published schema.
   // "$schema": "./node_modules/wrangler/config-schema.json",

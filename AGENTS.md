@@ -29,7 +29,7 @@ The website for **KindlingControl**, an open controller for Positive Grid Spark 
 | `/presets/` | presets hub pages | `site/presets/` |
 | `/api/*` | presets API | `worker/` + D1 (`migrations/`) |
 
-One Cloudflare Worker serves it all (`wrangler.jsonc`). Static files come from `dist/` (`tools/build.js`), and the Worker script only runs for `/api/*` and the `www.` → apex redirect. A daily cron cleans up expired rows.
+One Cloudflare Worker serves it all (`wrangler.jsonc`). Static files come from `dist/` (`tools/build.js`), and the Worker script only runs for `/api/*`. The `www.` → apex redirect is a Cloudflare **Redirect Rule** on the zone (dashboard, not code), because static requests never reach the Worker; the Worker's own www check is only a fallback for `/api/*`. A daily cron cleans up expired rows.
 
 **The app is never published here.** The build fails if `dist/app/` exists, the landing page never links to an app URL, and `site/_redirects` sends old `/app/…` links home. The landing page's main action is **Download** (the app repo's GitHub Releases).
 
@@ -37,7 +37,7 @@ One Cloudflare Worker serves it all (`wrangler.jsonc`). Static files come from `
 
 ```
 site/                 landing page, presets hub pages (presets/), _headers, _redirects, screenshots/
-worker/               index.js (routing, www redirect, cron), api.js (routes), auth.js (magic link + sessions),
+worker/               index.js (routing, www fallback, cron), api.js (routes), auth.js (magic link + sessions),
                       mail.js (Email Service / Resend / dev), preset.js (upload validation), util.js
 migrations/           D1 schema, numbered; never edit one that has been applied
 vendor/app/           files copied unchanged from the app repo; SOURCE.json = commit + hashes

@@ -11,7 +11,7 @@ kindlingcontrol.app is one Cloudflare Worker with static assets:
 
 `tools/build.js` assembles `dist/`. **The app is not published here** (the build fails if `dist/app/` appears): people install the desktop or Android app from the app repo's releases. Old `/app/…` links redirect (`site/_redirects`).
 
-`worker/index.js` runs only for `/api/*` (`run_worker_first` in `wrangler.jsonc`), redirects `www.` to the apex domain, and runs a daily cleanup from a cron trigger. Everything else is served straight from the static assets, with headers from `site/_headers` (a strict Content-Security-Policy on `/presets/*`).
+`worker/index.js` runs only for `/api/*` (`run_worker_first` in `wrangler.jsonc`) and runs a daily cleanup from a cron trigger. Static requests never reach it, so `www.` → apex is a Cloudflare Redirect Rule on the zone (setup step 1); the Worker's own www check only covers `/api/*` as a fallback. Everything else is served straight from the static assets, with headers from `site/_headers` (a strict Content-Security-Policy on `/presets/*`).
 
 ## Presets hub
 
@@ -81,7 +81,7 @@ npm run dev          # build dist/, then serve site + API on http://localhost:87
 
 ## Setting up Cloudflare (once)
 
-1. **Domain:** add `kindlingcontrol.app` to your Cloudflare account as a zone. `wrangler deploy` then attaches `kindlingcontrol.app` and `www.kindlingcontrol.app` as custom domains (`routes` in `wrangler.jsonc`).
+1. **Domain:** add `kindlingcontrol.app` to your Cloudflare account as a zone. `wrangler deploy` then attaches `kindlingcontrol.app` and `www.kindlingcontrol.app` as custom domains (`routes` in `wrangler.jsonc`). Then add a **Redirect Rule** (Rules → Redirect Rules) on the zone: when the hostname equals `www.kindlingcontrol.app`, 301-redirect to `https://kindlingcontrol.app` with the request path, preserving the query string.
 2. **Database:** `npx wrangler d1 create kindling-presets`, and paste the printed `database_id` into `wrangler.jsonc`.
 3. **Email:** onboard `kindlingcontrol.app` to Cloudflare Email Service, the `send_email` binding in `wrangler.jsonc` is already enabled. Alternatively, `npx wrangler secret put RESEND_API_KEY`.
 4. **Secrets:** `npx wrangler secret put ADMIN_EMAILS` (moderators, comma-separated) and `npx wrangler secret put IP_HASH_SALT` (any long random string).
