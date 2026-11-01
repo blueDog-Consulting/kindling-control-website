@@ -82,7 +82,7 @@ npm run dev          # build dist/, then serve site + API on http://localhost:87
 ## Setting up Cloudflare (once)
 
 1. **Domain:** add `kindlingcontrol.app` to your Cloudflare account as a zone. `wrangler deploy` then attaches `kindlingcontrol.app` and `www.kindlingcontrol.app` as custom domains (`routes` in `wrangler.jsonc`).
-2. **Database:** `npx wrangler d1 create kindling-presets`, and paste the printed `database_id` into `wrangler.jsonc` (`remote: true` makes local `wrangler dev` use the remote database).
+2. **Database:** `npx wrangler d1 create kindling-presets`, and paste the printed `database_id` into `wrangler.jsonc`.
 3. **Email:** onboard `kindlingcontrol.app` to Cloudflare Email Service, the `send_email` binding in `wrangler.jsonc` is already enabled. Alternatively, `npx wrangler secret put RESEND_API_KEY`.
 4. **Secrets:** `npx wrangler secret put ADMIN_EMAILS` (moderators, comma-separated) and `npx wrangler secret put IP_HASH_SALT` (any long random string).
 5. **CI:** add these secrets to this repository `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`. The token needs Workers Scripts: Edit, D1: Edit and, for the custom domain, Workers Routes: Edit on the zone.

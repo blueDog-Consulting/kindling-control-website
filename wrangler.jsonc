@@ -31,8 +31,7 @@
 			"database_name": "kindling-presets",
 			// Replace with the id printed by `npx wrangler d1 create kindling-presets`.
 			"database_id": "5de6899d-fc60-4461-a070-0ca7ce18f837",
-			"migrations_dir": "migrations",
-			"remote": true
+			"migrations_dir": "migrations"
 		}
 	],
 	// Cloudflare Email Service sends the sign-in links. Uncomment once kindlingcontrol.app is
