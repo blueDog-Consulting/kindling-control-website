@@ -21,6 +21,6 @@
     "check:docs": "node tools/check-docs.js"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=24"
   }
 }
