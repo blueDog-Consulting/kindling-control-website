@@ -9,15 +9,18 @@ import {
   redeemSignInLink,
   sessionCookie,
 } from './auth.js';
-import { sendSignInEmail } from './mail.js';
+import { sendSignInEmail, sendTesterConfirmEmail } from './mail.js';
 import { MAX_UPLOAD_BYTES, normalisePreset } from './preset.js';
-import { HttpError, cleanText, clientKey, errorResponse, json, randomToken, rateLimit } from './util.js';
+import { HttpError, cleanText, clientKey, errorResponse, json, randomToken, rateLimit, sha256 } from './util.js';
 
 const PAGE_SIZE = 24;
 const MAX_PAGE = 100;
 const REPORTS_TO_HIDE = 3;
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
+const TESTER_REQUEST_TTL = 90 * DAY; // confirmed Android test requests left unhandled are dropped after this
+const TESTER_CONFIRM_TTL = DAY; // the confirmation link, and unconfirmed requests
+const MAX_TESTER_IDS = 500;
 
 export async function handleApi(request, env, ctx, now = Date.now()) {
   const url = new URL(request.url);
@@ -77,6 +80,31 @@ export async function handleApi(request, env, ctx, now = Date.now()) {
       if (action === 'restore' && method === 'POST') return await restorePreset(env, request, id, now);
     }
 
+    // ---- Android test invites (Google Play internal testing)
+    if (path === '/api/testers/request' && method === 'POST') return await requestTesterInvite(request, env, origin, now);
+    if (path === '/api/testers/confirm' && method === 'POST') return await confirmTesterInvite(request, env, now);
+    if (path === '/api/admin/testers' && method === 'GET') {
+      await requireAdmin(env, request, now);
+      const { results } = await env.DB.prepare(
+        `SELECT id, name, email, confirmed_at AS confirmedAt FROM tester_requests
+          WHERE confirmed_at IS NOT NULL ORDER BY confirmed_at LIMIT ${MAX_TESTER_IDS}`,
+      ).all();
+      return json({ items: results });
+    }
+    if (path === '/api/admin/testers/invited' && method === 'POST') {
+      await requireAdmin(env, request, now);
+      const { ids } = await readJson(request, 32 * 1024);
+      const valid = (id) => typeof id === 'string' && id.length <= 32;
+      if (!Array.isArray(ids) || !ids.length || ids.length > MAX_TESTER_IDS || !ids.every(valid)) {
+        throw new HttpError(400, 'Send the ids of the requests you have invited.');
+      }
+      // One query whatever the count: D1 caps queries per invocation and bound parameters per query.
+      await env.DB.prepare('DELETE FROM tester_requests WHERE id IN (SELECT value FROM json_each(?))')
+        .bind(JSON.stringify(ids))
+        .run();
+      return json({ ok: true });
+    }
+
     // ---- moderation
     if (path === '/api/admin/hidden' && method === 'GET') {
       await requireAdmin(env, request, now);
@@ -111,6 +139,50 @@ async function requestSignIn(request, env, origin, now) {
   const sent = await sendSignInEmail(env, email, link);
   // Same answer whether or not the address has an account.
   return json({ ok: true, ...(sent.devLink ? { devLink: sent.devLink } : {}) });
+}
+
+async function requestTesterInvite(request, env, origin, now) {
+  const body = await readJson(request);
+  // Honeypot: a visually hidden field with a name autofill has no reason to fill. When it is
+  // filled, the answer looks the same but nothing is stored or sent.
+  if (typeof body.kc_hp === 'string' && body.kc_hp.trim()) return json({ ok: true });
+  const name = cleanText(body.name, 80);
+  if (name.length < 2) throw new HttpError(400, 'Enter your name.');
+  const email = normaliseEmail(body.email);
+  if (!email) throw new HttpError(400, 'Enter a valid email address.');
+  if (body.consent !== true) throw new HttpError(400, 'Please agree to us using your name and email to send the invite.');
+  const ipOk = await rateLimit(env.DB, `tester:${await clientKey(request, env)}`, 5, HOUR, now);
+  const emailOk = ipOk && (await rateLimit(env.DB, `tester:${email}`, 3, HOUR, now));
+  if (!ipOk || !emailOk) throw new HttpError(429, 'Too many requests. Wait a while and try again.');
+
+  // Nothing counts until the address owner confirms: the name waits in pending_name, so a
+  // stranger re-requesting someone's address can neither queue it nor change its confirmed name.
+  const token = randomToken(32);
+  await env.DB.prepare(
+    `INSERT INTO tester_requests (id, email, pending_name, token_hash, token_expires, created_at) VALUES (?, ?, ?, ?, ?, ?)
+     ON CONFLICT(email) DO UPDATE SET pending_name = excluded.pending_name, token_hash = excluded.token_hash,
+                                      token_expires = excluded.token_expires`,
+  )
+    .bind(randomToken(12), email, name, await sha256(token), now + TESTER_CONFIRM_TTL, now)
+    .run();
+  const sent = await sendTesterConfirmEmail(env, email, name, `${origin}/#invite-token=${token}`);
+  // Same answer whether or not the address already asked.
+  return json({ ok: true, ...(sent.devLink ? { devLink: sent.devLink } : {}) });
+}
+
+async function confirmTesterInvite(request, env, now) {
+  const { token } = await readJson(request);
+  if (typeof token !== 'string' || token.length < 20 || token.length > 100) throw new HttpError(400, 'That confirmation link is not valid.');
+  // Confirming again (after a new request) restarts the 90-day window.
+  const row = await env.DB.prepare(
+    `UPDATE tester_requests
+        SET name = pending_name, confirmed_at = ?, pending_name = NULL, token_hash = NULL, token_expires = NULL
+      WHERE token_hash = ? AND token_expires > ? RETURNING id`,
+  )
+    .bind(now, await sha256(token), now)
+    .first();
+  if (!row) throw new HttpError(400, 'That confirmation link has expired or was already used. Send the request again.');
+  return json({ ok: true });
 }
 
 async function listPresets(env, url) {
@@ -233,6 +305,12 @@ export async function cleanup(db, now) {
   await db.prepare('DELETE FROM login_tokens WHERE expires_at < ?').bind(now - DAY).run();
   await db.prepare('DELETE FROM sessions WHERE expires_at < ?').bind(now).run();
   await db.prepare('DELETE FROM rate_events WHERE at < ?').bind(now - 2 * DAY).run();
+  await db.prepare('DELETE FROM tester_requests WHERE confirmed_at IS NULL AND token_expires < ?').bind(now).run();
+  await db.prepare('DELETE FROM tester_requests WHERE confirmed_at < ?').bind(now - TESTER_REQUEST_TTL).run();
+  await db
+    .prepare('UPDATE tester_requests SET pending_name = NULL, token_hash = NULL, token_expires = NULL WHERE token_expires < ?')
+    .bind(now)
+    .run();
 }
 
 // ---------------------------------------------------------------------------- helpers
