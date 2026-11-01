@@ -19,7 +19,7 @@ It runs on **Cloudflare Workers** (static assets plus a small Worker) with a **D
 
 ## Develop
 
-Needs Node 22+.
+Needs Node 24+.
 
 ```sh
 npm test            # node:test: the presets API against SQLite, plus the docs check

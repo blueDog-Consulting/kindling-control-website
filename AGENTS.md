@@ -52,7 +52,7 @@ docs/PRESETS.md       hub design, API, privacy, Cloudflare setup
 ## Commands
 
 ```sh
-npm test                 # all tests (Node 22+: node:sqlite)
+npm test                 # all tests (Node 24+: node:sqlite)
 npm run dev              # build + serve site and API on http://localhost:8788 (in-memory DB)
 npm run build            # dist/
 npm run sync:app [-- <ref> | --from <checkout>] [--screenshots]   # refresh vendor/app/ from the app repo
